@@ -1,361 +1,320 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sicada - Weather Forecast</title>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <title>Prediksi Cuaca Adaro (SiCaDa)</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        #map { height: 500px; width: 100%; z-index: 0; }
+        .chart-container { position: relative; height: 50vh; width: 100%; }
+        
+        /* Style untuk Label Peta */
+        .map-label {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid #666;
+            border-radius: 4px;
+            padding: 2px 4px;
+            font-size: 10px;
+            font-weight: bold;
+            color: #333;
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+            white-space: nowrap; /* Penting agar label tidak pecah baris */
         }
-        .image-container {
-            text-align: center;
-            margin: 20px;
+        .leaflet-tooltip-pane .map-label {
+            margin-top: -10px; /* Adjust posisi label */
         }
-        .image-container img {
-            max-width: 100%;
-            height: auto;
+
+        /* Modal Styles untuk Image Preview */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 1000; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.9); 
+            padding-top: 60px;
         }
-        .image-container h2 {
-            margin-top: 10px;
+
+        .modal-content {
+            margin: auto;
+            display: block;
+            width: 95%;
+            max-width: 1200px;
+            max-height: 95vh;
+            object-fit: contain; /* Memastikan gambar pas di dalam modal */
         }
-        .caption-container {
-            text-align: left;
-            margin: 20px;
-        }    
-        /* Basic styling for tabs */
-        .tab {
-            display: flex;
-            border-bottom: 2px solid #ccc;
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
             cursor: pointer;
         }
-        .tab button {
-            flex: 1;
-            padding: 10px;
-            background-color: #f1f1f1;
-            border: none;
-            outline: none;
-            transition: background-color 0.3s;
+
+        .close-btn:hover,
+        .close-btn:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
         }
-        .tab button.active {
-            background-color: #ccc;
+
+        /* Style untuk container gambar agar terlihat clickable */
+        .image-container-clickable {
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
-        .tab-content {
-            display: none;
-            padding: 20px;
+        .image-container-clickable:hover {
+            transform: scale(1.01);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
-        .tab-content.active {
-            display: flex;
-			flex-direction: column;
-            align-items: center;			
-        }
-	table {
-            width: 100%;
-            border-collapse: collapse;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            margin: 20px 0;
-            background-color: #fff;
-        }
-        th, td {
-            padding: 15px;
-            text-align: left;
-        }
-        th {
-            background-color: #4CAF50;
-            color: #fff;
-            font-size: 14px;
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        tr:hover {
-            background-color: #f1f1f1;
-        }
-        td {
-            color: #333;
-            font-size: 16px;
-        }
-	.bar {
-            fill: steelblue;
-        }	    
-        .line {
-            fill: none;
-            stroke: steelblue;
-            stroke-width: 2px;
-        }
-        .grid line {
-            stroke: lightgrey;
-            stroke-opacity: 0.7;
-            shape-rendering: crispEdges;
-        }
-	.major-grid line {
-            stroke: grey;
-            stroke-opacity: 1;
-            shape-rendering: crispEdges;
-        }
-        .minor-grid line {
-            stroke: lightgrey;
-            stroke-opacity: 0.7;
-            shape-rendering: crispEdges;
-        }	    
-        .grid path {
-            stroke-width: 0;
-        }
-        .tooltip {
-            position: absolute;
-            text-align: center;
-            width: 130px;
-            height: 28px;
-            padding: 2px;
-            font: 12px sans-serif;
-            background: lightsteelblue;
-            border: 0px;
-            border-radius: 8px;
-            pointer-events: none;
-        }
-        .chart {
-            margin-bottom: 50px;
-        }		
-	html, body {
-            height: 100%;
-            margin: 0;
-        }
-        #map {
-            width: 100%;
-            height: 100%;
-        }    
     </style>
 </head>
-<body>
-    <h1>SICADA</h1>
-    <h3>Prediksi Cuaca Adaro</h3>
-    <!-- Tabs -->
-    <div class="tab">
-        <button class="tablinks" onclick="openTab(event, 'HistoryWeather')">History Weather</button>
-        <button class="tablinks active" onclick="openTab(event, 'CurrentWeather')">Current Weather</button>
-	<button class="tablinks" onclick="openTab(event, 'WeatherForecast')">Weather Forecast</button>
-    </div>
+<body class="bg-slate-100 text-slate-800 font-sans">
 
-    <!-- Tab Content -->
-    <div id="HistoryWeather" class="tab-content">
-		<h2>ROM-20</h2>
-		<div id="chart1" class="chart"></div>
-		<h2>ROM-19</h2>
-		<div id="chart2" class="chart"></div>
-		<h2>ROM-13</h2>
-		<div id="chart3" class="chart"></div>
-		<h2>LW-BUMA</h2>
-		<div id="chart4" class="chart"></div>
-		<h2>ROM-09</h2>
-		<div id="chart5" class="chart"></div>
-		<h2>ROM-06</h2>
-		<div id="chart6" class="chart"></div>
-		<h2>ROM-03 WARA</h2>
-		<div id="chart7" class="chart"></div>
-		<h2>SP-3B WARA</h2>
-		<div id="chart8" class="chart"></div>
-		<h2>DISPATCH KM67</h2>
-		<div id="chart9" class="chart"></div>
-		<h2>QC Kelanis</h2>
-		<div id="chart10" class="chart"></div>
-		<h2>PORT Kelanis</h2>
-		<div id="chart11" class="chart"></div>
-		<div class="tooltip" style="opacity:0;"></div>    
-	</div>	
-    <div id="WeatherForecast" class="tab-content">
-        <div class="image-container">
-            <h2>Weather Forecast - CTNT</h2>
-            <img src="https://raw.githubusercontent.com/absgeoviz/dummy_data/main/heatmap_CTNT.png" alt="Image 1">
+    <!-- Navbar -->
+    <nav class="bg-emerald-700 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <i class="fa-solid fa-cloud-showers-heavy text-2xl mr-3"></i>
+                    <span class="font-bold text-xl tracking-wide">Prediksi Cuaca Adaro (SiCaDa)</span>
+                </div>
+            </div>
         </div>
-        <div class="image-container">
-            <h2>Weather Forecast - SOUTH</h2>
-            <img src="https://raw.githubusercontent.com/absgeoviz/dummy_data/main/heatmap_SOUTH.png" alt="Image 2">
-        </div>
-        <div class="image-container">
-            <h2>Weather Forecast - WARA</h2>
-            <img src="https://raw.githubusercontent.com/absgeoviz/dummy_data/main/heatmap_WARA.png" alt="Image 3">
-        </div>
-        <div class="image-container">
-            <h2>Weather Station Location</h2>
-            <img src="https://raw.githubusercontent.com/absgeoviz/dummy_data/main/map_weather_station.png" alt="Image 4">
-        </div>
-        <div class="caption-container">
-            Data source description: <a href="https://www.wunderground.com/about/data" target="_blank">Wunderground Data Source</a><p>
-            CTNT = IBALAN17, ITABAL8, ITABAL9<p>
-            SOUTH = ITABAL1, IBALAN16, ITABAL11<p>
-            WARA = 'ITABAL5
+    </nav>
+
+    <!-- Tab Navigation -->
+    <div class="bg-white shadow">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex justify-around sm:justify-start">
+                <button onclick="switchTab('current')" id="tab-current" class="tab-btn flex-1 sm:flex-none py-4 px-6 text-center text-emerald-600 border-b-2 border-emerald-600 font-medium focus:outline-none">
+                    Current
+                </button>
+                <button onclick="switchTab('historical')" id="tab-historical" class="tab-btn flex-1 sm:flex-none py-4 px-6 text-center text-gray-500 hover:text-emerald-600 font-medium focus:outline-none">
+                    Historical
+                </button>
+                <button onclick="switchTab('forecast')" id="tab-forecast" class="tab-btn flex-1 sm:flex-none py-4 px-6 text-center text-gray-500 hover:text-emerald-600 font-medium focus:outline-none">
+                    Forecast
+                </button>
+            </div>
         </div>
     </div>
 
-    <div id="CurrentWeather" class="tab-content active">
-        <h2>Rain Radar Map</h2>
-	 <!-- <div class="image-container"> --> 
-            <!-- <img src="https://raw.githubusercontent.com/absgeoviz/dummy_data/main/map_radar.jpg" alt="Image 5"> -->
-         <!-- </div> -->
-	<div id="map"></div>
-        <div class="caption-container">
-	Current : rainfall rate, potensi intensitas hujan jika hujan dengan intensitas terukur saat ini berlangsung secara konstan selama 1 jam (mm/hour)<p>
-        Daily   : cummulative/total rain, intensitas hujan dari mulai 00:01 s/d waktu update (mm/day)
-	<table>
-	        <thead>
-	            <tr>
-	                <th>Kategori Intensitas Hujan</th>
-	                <th>Intensitas (mm/hour)</th>
-	            </tr>
-	        </thead>
-	        <tbody>
-	            <tr>
-	                <td>Hujan ringan (light rain)</td>
-	                <td>1 - 5</td>
-	            </tr>
-	            <tr>
-	                <td>Hujan sedang (moderate rain)</td>
-	                <td>5 - 10</td>
-	            </tr>
-	            <tr>
-	                <td>Hujan lebat (heavy rain)</td>
-	                <td>10 - 20</td>
-	            </tr>
-	            <tr>
-	                <td>Hujan sangat lebat (very heavy rain)</td>
-	                <td>&gt; 20</td>
-	            </tr>
-	        </tbody>
-	    </table>
-	</div>
-	
-    	<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    	<script src="app.js"></script>
-     </div>
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
+        <!-- PAGE: CURRENT -->
+        <div id="page-current" class="page-section space-y-6">
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <h2 class="text-lg font-bold mb-3 text-slate-700"><i class="fa-solid fa-map-location-dot mr-2"></i>Live Radar & Station Map</h2>
+                <div id="map" class="rounded border border-slate-200"></div>
+                <div class="mt-2 text-xs text-gray-500 flex justify-between">
+                    <span id="radar-timestamp">Radar Time: Loading...</span>
+                    <span>Auto-update: 5 min</span>
+                </div>
+            </div>
+            
+            <div>
+                <h2 class="text-lg font-bold mb-3 text-slate-700"><i class="fa-solid fa-droplet mr-2"></i>Current Rainfall Intensity</h2>
+                <div id="station-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <!-- Cards will be injected here by JS -->
+                     <div class="col-span-full text-center py-10 text-gray-400">
+                        <i class="fa-solid fa-circle-notch fa-spin text-2xl"></i><br>Loading Station Data...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE: HISTORICAL -->
+        <div id="page-historical" class="page-section hidden space-y-6">
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-slate-700"><i class="fa-solid fa-chart-line mr-2"></i>7-Day Summary (API)</h2>
+                    <select id="station-select" class="mt-2 sm:mt-0 block w-full sm:w-64 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-md border">
+                        <option value="">Pilih Station...</option>
+                        <!-- Options injected by JS based on manual list -->
+                    </select>
+                </div>
+                <div class="chart-container">
+                    <canvas id="historyChart"></canvas>
+                </div>
+                <p class="text-xs text-gray-400 mt-2 text-center">Data source: api.weather.com (PWS Daily Summary)</p>
+            </div>
+        </div>
+
+        <!-- PAGE: FORECAST -->
+        <div id="page-forecast" class="page-section hidden space-y-6">
+            <div class="bg-white rounded-lg shadow-md p-4 text-center">
+                <h2 class="text-lg font-bold mb-6 text-slate-700">Weather Forecast Maps</h2>
+                
+                <div class="flex flex-col space-y-8 max-w-4xl mx-auto">
+                    
+                    <!-- Image 1 -->
+                    <div class="border rounded-lg shadow-sm overflow-hidden image-container-clickable" onclick="openModal('./data/heatmap_CTNT.png', 'Area CTNT')">
+                        <div class="bg-slate-50 p-2 border-b text-left font-semibold text-slate-700">Area CTNT</div>
+                        <img src="./data/heatmap_CTNT.png" onerror="this.src='https://via.placeholder.com/800x400?text=heatmap_CTNT+Not+Found'" class="w-full h-auto" alt="Heatmap CTNT">
+                    </div>
+
+                    <!-- Image 2 -->
+                    <div class="border rounded-lg shadow-sm overflow-hidden image-container-clickable" onclick="openModal('./data/heatmap_SOUTH.png', 'Area SOUTH')">
+                        <div class="bg-slate-50 p-2 border-b text-left font-semibold text-slate-700">Area SOUTH</div>
+                        <img src="./data/heatmap_SOUTH.png" onerror="this.src='https://via.placeholder.com/800x400?text=heatmap_SOUTH+Not+Found'" class="w-full h-auto" alt="Heatmap SOUTH">
+                    </div>
+
+                    <!-- Image 3 -->
+                    <div class="border rounded-lg shadow-sm overflow-hidden image-container-clickable" onclick="openModal('./data/heatmap_WARA.png', 'Area WARA')">
+                        <div class="bg-slate-50 p-2 border-b text-left font-semibold text-slate-700">Area WARA</div>
+                        <img src="./data/heatmap_WARA.png" onerror="this.src='https://via.placeholder.com/800x400?text=heatmap_WARA+Not+Found'" class="w-full h-auto" alt="Heatmap WARA">
+                    </div>
+
+                </div>
+                <p class="mt-6 text-gray-500 text-sm">Forecast data diperbarui secara berkala.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Image Modal for Fullscreen Preview -->
+    <div id="imageModal" class="modal">
+        <span class="close-btn" onclick="closeModal()">&times;</span>
+        <!-- Konten gambar di sini -->
+        <img class="modal-content" id="modalImage">
+    </div>
+
+    <!-- SCRIPT FOR MODAL FUNCTIONALITY (Ditempatkan sebelum script.js agar fungsi openModal tersedia) -->
     <script>
-        function openTab(evt, tabName) {
-            // Hide all tab content
-            var tabContent = document.getElementsByClassName("tab-content");
-            for (var i = 0; i < tabContent.length; i++) {
-                tabContent[i].style.display = "none";
-                tabContent[i].classList.remove("active");
-            }
+        // Zooming/Panning logic (Tambahan, jika diperlukan)
+        let isZoomed = false;
+        let scale = 1;
+        let currentX = 0;
+        let currentY = 0;
 
-            // Remove active class from all tab links
-            var tabLinks = document.getElementsByClassName("tablinks");
-            for (var i = 0; i < tabLinks.length; i++) {
-                tabLinks[i].classList.remove("active");
-            }
+        function openModal(src, title) {
+            const modal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            
+            modalImage.src = src;
+            modal.style.display = 'block';
 
-            // Show the current tab and add "active" class to the clicked tab link
-            document.getElementById(tabName).style.display = "block";
-            document.getElementById(tabName).classList.add("active");
-            evt.currentTarget.classList.add("active");
-        }
-        // Function to create a line plot
-        function createLinePlot(csvFile, chartId) {
-            const margin = {top: 20, right: 30, bottom: 30, left: 50},
-                  width = 800 - margin.left - margin.right,
-                  height = 200 - margin.top - margin.bottom;
-
-            const svg = d3.select(chartId)
-                          .append("svg")
-                          .attr("width", width + margin.left + margin.right)
-                          .attr("height", height + margin.top + margin.bottom)
-                        .append("g")
-                          .attr("transform", `translate(${margin.left},${margin.top})`);
-
-            const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
-
-            d3.csv(csvFile).then(data => {
-                data.forEach(d => {
-                    d.datetime = parseTime(d.datetime);
-                    d.precipRate = +d.precipRate;
-                });
-
-                const x = d3.scaleTime().range([0, width]);
-                const y = d3.scaleLinear().range([height, 0]);
-
-                const valueline = d3.line()
-                                    .x(d => x(d.datetime))
-                                    .y(d => y(d.precipRate));
-
-                x.domain(d3.extent(data, d => d.datetime));
-                y.domain([0, d3.max(data, d => d.precipRate)]);
-
-                svg.append("path")
-                   .data([data])
-                   .attr("class", "line")
-                   .attr("d", valueline);
-
-                svg.append("g")
-                   .attr("class", "major-grid")			
-                   .attr("transform", `translate(0,${height})`)
-                   .call(d3.axisBottom(x)
-		       .ticks(d3.timeDay.every(1))
-                       .tickFormat(d3.timeFormat("%d %b")));
-
-                svg.append("g")
-                   .call(d3.axisLeft(y));
-
-                svg.append("g")
-                   .attr("class", "minor-grid")
-                   .attr("transform", `translate(0,${height})`)
-                   .call(d3.axisBottom(x)
-                       .ticks(d3.timeHour.every(6))
-		       .tickSize(-height)
-                       .tickFormat(""));
-
-                svg.append("g")
-                   .attr("class", "minor-grid")
-                   .call(d3.axisLeft(y)
-                       .tickSize(-width)
-                       .tickFormat(""));
-
-                const tooltip = d3.select(".tooltip");
-
-                svg.selectAll("rect")
-                   .data(data)
-                   .enter().append("rect")
-                   .attr("x", d => x(d.datetime) - 5)
-                   .attr("y", d => y(d.precipRate) - 5)
-                   .attr("width", 10)
-                   .attr("height", 10)
-                   .attr("opacity", 0)
-                   .on("mouseover", (event, d) => {
-                       tooltip.transition()
-                              .duration(200)
-                              .style("opacity", .9);
-                       tooltip.html(`Time: ${d3.timeFormat("%d-%b-%y %H:%M")(d.datetime)}<br>Rate: ${d.precipRate}`)
-                              .style("left", (event.pageX + 5) + "px")
-                              .style("top", (event.pageY - 28) + "px");
-                   })
-                   .on("mouseout", () => {
-                       tooltip.transition()
-                              .duration(500)
-                              .style("opacity", 0);
-                   });
-            }).catch(error => {
-                console.error('Error loading the CSV file:', error);
-            });
+            // Reset zoom state
+            isZoomed = false;
+            scale = 1;
+            currentX = 0;
+            currentY = 0;
+            modalImage.style.transform = `translate(0, 0) scale(1)`;
+            modalImage.style.cursor = 'zoom-in';
+            
+            // Tambahkan event listener untuk zoom (klik)
+            modalImage.onclick = toggleZoom;
         }
 
-        // Create three line plots
-        createLinePlot("data/ITABAL8.csv", "#chart1");
-        createLinePlot("./data/ITABAL9.csv", "#chart2");
-        createLinePlot("./data/IBALAN17.csv", "#chart3");		
-        createLinePlot("./data/ITABAL1.csv", "#chart4");		
-        createLinePlot("./data/ITABAL11.csv", "#chart5");		
-        createLinePlot("./data/IBALAN16.csv", "#chart6");		
-        createLinePlot("./data/ITABAL5.csv", "#chart7");		
-        createLinePlot("./data/ITABAL12.csv", "#chart8");		
-        createLinePlot("./data/ITABAL10.csv", "#chart9");		
-        createLinePlot("./data/ISOUTH1402.csv", "#chart10");		
-        createLinePlot("./data/ISOUTH1403.csv", "#chart11");		
-	    
+        function closeModal() {
+            document.getElementById('imageModal').style.display = 'none';
+            document.getElementById('modalImage').onclick = null; // Hapus event listener
+        }
+
+        function toggleZoom(event) {
+            const modalImage = document.getElementById('modalImage');
+            
+            if (isZoomed) {
+                // Zoom out
+                isZoomed = false;
+                scale = 1;
+                currentX = 0;
+                currentY = 0;
+                modalImage.style.transform = `translate(0, 0) scale(1)`;
+                modalImage.style.cursor = 'zoom-in';
+                modalImage.removeEventListener('mousedown', startPan);
+            } else {
+                // Zoom in ke posisi klik
+                isZoomed = true;
+                scale = 2; // Perbesar 2x
+                
+                // Hitung posisi klik relatif terhadap gambar
+                const rect = modalImage.getBoundingClientRect();
+                const clickX = event.clientX - rect.left;
+                const clickY = event.clientY - rect.top;
+                
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                // Hitung translasi agar titik klik berada di tengah layar
+                currentX = (centerX - clickX) * scale / 2;
+                currentY = (centerY - clickY) * scale / 2;
+                
+                modalImage.style.transform = `translate(${currentX}px, ${currentY}px) scale(${scale})`;
+                modalImage.style.cursor = 'grab';
+                
+                // Tambahkan event listener untuk pan
+                modalImage.addEventListener('mousedown', startPan);
+            }
+        }
+        
+        // Pan logic
+        let isPanning = false;
+        let startX, startY;
+        let initialX, initialY;
+
+        function startPan(e) {
+            e.preventDefault();
+            if (!isZoomed) return;
+            isPanning = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            initialX = currentX;
+            initialY = currentY;
+            document.addEventListener('mousemove', panImage);
+            document.addEventListener('mouseup', stopPan);
+            document.getElementById('modalImage').style.cursor = 'grabbing';
+        }
+
+        function panImage(e) {
+            if (!isPanning) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+
+            currentX = initialX + dx;
+            currentY = initialY + dy;
+            
+            document.getElementById('modalImage').style.transform = `translate(${currentX}px, ${currentY}px) scale(${scale})`;
+        }
+
+        function stopPan() {
+            isPanning = false;
+            document.removeEventListener('mousemove', panImage);
+            document.removeEventListener('mouseup', stopPan);
+            document.getElementById('modalImage').style.cursor = 'grab';
+        }
+
+        // Close modal saat klik di luar gambar
+        window.onclick = function(event) {
+            const modal = document.getElementById('imageModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
     </script>
+    
+    <!-- Libraries -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
