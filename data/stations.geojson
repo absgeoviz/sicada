@@ -1,0 +1,27 @@
+{
+"type": "FeatureCollection",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "stationID": "ITABAL1", "location": "LW BUMA", "lat": -2.209102, "lon": 115.492947 }, "geometry": { "type": "Point", "coordinates": [ 115.492947, -2.209102 ] } },
+{ "type": "Feature", "properties": { "stationID": "IBALAN16", "location": "ROM-06", "lat": -2.225849, "lon": 115.507004 }, "geometry": { "type": "Point", "coordinates": [ 115.507004, -2.225849 ] } },
+{ "type": "Feature", "properties": { "stationID": "IBALAN17", "location": "ROM-13", "lat": -2.212, "lon": 115.548 }, "geometry": { "type": "Point", "coordinates": [ 115.548, -2.212 ] } },
+{ "type": "Feature", "properties": { "stationID": "ITABAL11", "location": "ROM-09", "lat": -2.234981, "lon": 115.473997 }, "geometry": { "type": "Point", "coordinates": [ 115.473997, -2.234981 ] } },
+{ "type": "Feature", "properties": { "stationID": "ITABAL5", "location": "ROM-03", "lat": -2.162, "lon": 115.502 }, "geometry": { "type": "Point", "coordinates": [ 115.502, -2.162 ] } },
+{ "type": "Feature", "properties": { "stationID": "ITABAL8", "location": "ROM-20", "lat": -2.155894, "lon": 115.56897 }, "geometry": { "type": "Point", "coordinates": [ 115.56897, -2.155894 ] } },
+{ "type": "Feature", "properties": { "stationID": "ITABAL9", "location": "ROM-19", "lat": -2.17091, "lon": 115.558981 }, "geometry": { "type": "Point", "coordinates": [ 115.558981, -2.17091 ] } },
+{ "type": "Feature", "properties": { "stationID": "ITABAL12", "location": "SP3 WARA", "lat": -2.172947, "lon": 115.451 }, "geometry": { "type": "Point", "coordinates": [ 115.451, -2.172947 ] } },
+{ "type": "Feature", "properties": { "stationID": "ITABAL13", "location": "SP2C WARA", "lat": -2.146, "lon": 115.51 }, "geometry": { "type": "Point", "coordinates": [ 115.51, -2.146 ] } },
+{ "type": "Feature", "properties": { "stationID": "ITABAL15", "location": "WCC", "lat": -2.19, "lon": 115.47 }, "geometry": { "type": "Point", "coordinates": [ 115.47, -2.19 ] } },
+{ "type": "Feature", "properties": { "stationID": "IBALAN22", "location": "LAB PRG", "lat": -2.312, "lon": 115.482 }, "geometry": { "type": "Point", "coordinates": [ 115.482, -2.312 ] } },
+{ "type": "Feature", "properties": { "stationID": "IBALAN23", "location": "CSA HW6", "lat": -2.183, "lon": 115.594 }, "geometry": { "type": "Point", "coordinates": [ 115.594, -2.183 ] } },
+{ "type": "Feature", "properties": { "stationID": "ISOUTH1402", "location": "QCKLS", "lat": -2.295925, "lon": 114.871027 }, "geometry": { "type": "Point", "coordinates": [ 114.871027, -2.295925 ] } },
+{ "type": "Feature", "properties": { "stationID": "ISOUTH1403", "location": "PORTKLS", "lat": -2.293342, "lon": 114.869785 }, "geometry": { "type": "Point", "coordinates": [ 114.869785, -2.293342 ] } },
+{ "type": "Feature", "properties": { "stationID": "ITABAL16", "location": "VP KOMODO", "lat": -2.195, "lon": 115.51 }, "geometry": { "type": "Point", "coordinates": [ 115.51, -2.195 ] } },
+{ "type": "Feature", "properties": { "stationID": "ITABAL18", "location": "KM 43", "lat": -2.209, "lon": 115.255 }, "geometry": { "type": "Point", "coordinates": [ 115.255, -2.209 ] } },
+{ "type": "Feature", "properties": { "stationID": "ITABAL21", "location": "KM 50", "lat": -2.221, "lon": 115.313 }, "geometry": { "type": "Point", "coordinates": [ 115.313, -2.221 ] } },
+{ "type": "Feature", "properties": { "stationID": "IEASTB117", "location": "KM 29", "lat": -2.231, "lon": 115.123 }, "geometry": { "type": "Point", "coordinates": [ 115.123, -2.231 ] } },
+{ "type": "Feature", "properties": { "stationID": "IEASTB119", "location": "KM 35", "lat": -2.215, "lon": 115.181 }, "geometry": { "type": "Point", "coordinates": [ 115.181, -2.215 ] } },
+{ "type": "Feature", "properties": { "stationID": "ISOUTH1693", "location": "SP KELANIS", "lat": -2.29563, "lon": 114.877212 }, "geometry": { "type": "Point", "coordinates": [ 114.877212, -2.29563 ] } },
+{ "type": "Feature", "properties": { "stationID": "ITABAL10", "location": "KM 67", "lat": -2.240983, "lon": 115.453999 }, "geometry": { "type": "Point", "coordinates": [ 115.453999, -2.240983 ] } }
+]
+}
