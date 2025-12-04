@@ -22,6 +22,9 @@
 { "type": "Feature", "properties": { "stationID": "IEASTB117", "location": "KM 29", "lat": -2.231, "lon": 115.123 }, "geometry": { "type": "Point", "coordinates": [ 115.123, -2.231 ] } },
 { "type": "Feature", "properties": { "stationID": "IEASTB119", "location": "KM 35", "lat": -2.215, "lon": 115.181 }, "geometry": { "type": "Point", "coordinates": [ 115.181, -2.215 ] } },
 { "type": "Feature", "properties": { "stationID": "ISOUTH1693", "location": "SP KELANIS", "lat": -2.29563, "lon": 114.877212 }, "geometry": { "type": "Point", "coordinates": [ 114.877212, -2.29563 ] } },
-{ "type": "Feature", "properties": { "stationID": "ITABAL10", "location": "KM 67", "lat": -2.240983, "lon": 115.453999 }, "geometry": { "type": "Point", "coordinates": [ 115.453999, -2.240983 ] } }
+{ "type": "Feature", "properties": { "stationID": "ITABAL10", "location": "KM 67", "lat": -2.240983, "lon": 115.453999 }, "geometry": { "type": "Point", "coordinates": [ 115.453999, -2.240983 ] } },
+{ "type": "Feature", "properties": { "stationID": "ITABAL14", "location": "VP SABANG", "lat": -2.13, "lon": 115.59 }, "geometry": { "type": "Point", "coordinates": [ 115.59,-2.13 ] } },
+{ "type": "Feature", "properties": { "stationID": "IBALAN24", "location": "SP 6C LW", "lat": -2.252, "lon": 115.55 }, "geometry": { "type": "Point", "coordinates": [ 115.55, -2.252 ] } },
+{ "type": "Feature", "properties": { "stationID": "IEASTB118", "location": "KM 10", "lat": -2.28, "lon": 114.96 }, "geometry": { "type": "Point", "coordinates": [ 114.96, -2.28 ] } }
 ]
 }
