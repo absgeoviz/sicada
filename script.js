@@ -8,26 +8,26 @@ let historyChart = null;
 // Kita tetap gunakan ini untuk dropdown Historical agar urutan dan label konsisten
 const stationLabels = {
     "IBALAN23": "CSA HW6",
-    "ITABAL10": "DISPATCH KM67",
-    "IEASTB118": "KM 10",
-    "IEASTB117": "KM 29",
-    "IEASTB11": "KM 35",
-    "ITABAL18": "KM 43", 
-    "ITABAL21": "KM 50", 
-    "IBALAN22": "LAB PRG",
-    "ITABAL1": "LW BUMA",
-    "ISOUTH1402": "QCKLS",
-    "IBALAN16": "ROM 06",
-    "ITABAL11": "ROM 09",
-    "IBALAN17": "ROM 13", 
     "ITABAL9": "ROM 19",
     "ITABAL8": "ROM 20",
+    "IBALAN17": "ROM 13",     
+    "ITABAL14": "VP SABANG",
+    "IBALAN16": "ROM 06",
+    "ITABAL11": "ROM 09",     
+    "ITABAL1": "LW BUMA",
+    "ITABAL16": "VP KOMODO",
     "ITABAL5": "SP 2C WARA", 
     "ITABAL13": "SP 2C WARA", 
     "ITABAL12": "SP 3 WARA",
-    "ITABAL14": "VP SABANG",
-    "ITABAL15": "WCC",
-    "ITABAL16": "VP KOMODO" 
+    "ITABAL15": "WCC",  
+    "IBALAN22": "LAB PRG",
+    "ITABAL10": "KM 67",    
+    "ITABAL21": "KM 50",
+    "ITABAL18": "KM 43",
+    "IEASTB11": "KM 35",
+    "IEASTB117": "KM 29",
+    "IEASTB118": "KM 10",
+    "ISOUTH1402": "QCKLS"
 };
 const targetStations = Object.keys(stationLabels); 
 
@@ -67,24 +67,31 @@ function initMap() {
 
 function getWMSTimestamp() {
     const now = new Date();
-    // Gunakan waktu UTC
+    // Gunakan waktu UTC untuk logic rounding 5 menit
     const utcMin = now.getUTCMinutes();
-    const remainder = utcMin % 5;
+    const remainder = utcMin % 10;
     const roundedMin = utcMin - remainder;
     now.setUTCMinutes(roundedMin);
     
-    const year = now.getUTCFullYear();
-    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(now.getUTCDate()).padStart(2, '0');
-    const hour = String(now.getUTCHours()).padStart(2, '0');
-    const minute = String(now.getUTCMinutes()).padStart(2, '0');
+    // Format untuk URL WMS (Harus tetap UTC agar sesuai nama layer BMKG)
+    const yearUTC = now.getUTCFullYear();
+    const monthUTC = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const dayUTC = String(now.getUTCDate()).padStart(2, '0');
+    const hourUTC = String(now.getUTCHours()).padStart(2, '0');
+    const minuteUTC = String(now.getUTCMinutes()).padStart(2, '0');
+
+    // Format untuk Display Label (Gunakan Local Time)
+    const yearLocal = now.getFullYear();
+    const monthLocal = String(now.getMonth() + 1).padStart(2, '0');
+    const dayLocal = String(now.getDate()).padStart(2, '0');
+    const hourLocal = String(now.getHours()).padStart(2, '0');
+    const minuteLocal = String(now.getMinutes()).padStart(2, '0');
 
     return {
-        str: `${year}${month}${day}${hour}${minute}`,
-        display: `${day}-${month}-${year} ${hour}:${minute} UTC`
+        str: `${yearUTC}${monthUTC}${dayUTC}${hourUTC}${minuteUTC}`,
+        display: `${dayLocal}-${monthLocal}-${yearLocal} ${hourLocal}:${minuteLocal} WITA`
     };
 }
-
 function updateWMSLayer() {
     const timeData = getWMSTimestamp();
     const layerName = `sidarma_mosaic_cmax:Indonesia_${timeData.str}`;
