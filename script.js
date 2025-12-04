@@ -5,37 +5,37 @@ let stationsData = [];
 let historyChart = null; 
 
 // Daftar Station ID dan Label yang diminta (value: label)
+// Kita tetap gunakan ini untuk dropdown Historical agar urutan dan label konsisten
 const stationLabels = {
-
-    "ITABAL1": "LW BUMA",
-    "ITABAL5": "ROM 03 WARA",
-    "IBALAN16": "ROM 06",
-    "ITABAL11": "ROM 09",
-    "IBALAN17": "ROM 13", // ID ini tidak ada di list sebelumnya, ditambahkan di sini
-    "ITABAL9": "ROM 19",
-    "ITABAL8": "ROM 20",
-    "ITABAL13": "SP 2C WARA", // 
-    "ITABAL12": "SP 3 WARA",
-    "ITABAL14": "VP SABANG",
-    "IBALAN23": "CSA HW6",    
-    "ITABAL15": "WCC",
-    "ITABAL16": "VP KOMODO", // ID ini tidak ada di list sebelumnya, ditambahkan di sini
-    "ISOUTH1402": "QCKLS",
+    "IBALAN23": "CSA HW6",
+    "ITABAL10": "DISPATCH KM67",
     "IEASTB118": "KM 10",
     "IEASTB117": "KM 29",
     "IEASTB11": "KM 35",
-    "ITABAL18": "KM 43", // ID ini tidak ada di list sebelumnya, ditambahkan di sini
-    "ITABAL21": "KM 50", // ID ini tidak ada di list sebelumnya, ditambahkan di sini
-    "ITABAL10": "KM 67",
-    "IBALAN22": "LAB PRG"
+    "ITABAL18": "KM 43", 
+    "ITABAL21": "KM 50", 
+    "IBALAN22": "LAB PRG",
+    "ITABAL1": "LW BUMA",
+    "ISOUTH1402": "QCKLS",
+    "IBALAN16": "ROM 06",
+    "ITABAL11": "ROM 09",
+    "IBALAN17": "ROM 13", 
+    "ITABAL9": "ROM 19",
+    "ITABAL8": "ROM 20",
+    "ITABAL5": "SP 2C WARA", 
+    "ITABAL13": "SP 2C WARA", 
+    "ITABAL12": "SP 3 WARA",
+    "ITABAL14": "VP SABANG",
+    "ITABAL15": "WCC",
+    "ITABAL16": "VP KOMODO" 
 };
-const targetStations = Object.keys(stationLabels); // Ambil semua ID sebagai array
+const targetStations = Object.keys(stationLabels); 
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
     loadStationData();
-    populateHistoricalDropdown(); // Populate dropdown based on list
+    populateHistoricalDropdown(); 
     startRadarUpdater();
     switchTab('current');
 });
@@ -67,6 +67,7 @@ function initMap() {
 
 function getWMSTimestamp() {
     const now = new Date();
+    // Gunakan waktu UTC
     const utcMin = now.getUTCMinutes();
     const remainder = utcMin % 5;
     const roundedMin = utcMin - remainder;
@@ -97,8 +98,10 @@ function updateWMSLayer() {
         transparent: true,
         version: '1.1.0',
         styles: 'CMAX_dBZ',
-        attribution: 'BMKG Radar'
+        attribution: 'BMKG Radar',
+        //opacity: 0.3 // Transparansi 70% (Opacity 30%)
     });
+    wmsLayer.setOpacity(0.5);
     wmsLayer.addTo(map);
 }
 
@@ -110,16 +113,18 @@ function startRadarUpdater() {
 
 async function loadStationData() {
     try {
-        // Tambahkan cache busting untuk memastikan GeoJSON terbaru ter-load
-        const response = await fetch(`./data/station.geojson?t=${new Date().getTime()}`);
+        // [MODIFIKASI] Source diganti ke stations.geojson
+        const response = await fetch(`./data/stations.geojson?t=${new Date().getTime()}`);
         const geojson = await response.json();
         stationsData = geojson.features;
 
         // 1. Plot Station di Peta dengan Label
         L.geoJSON(geojson, {
-            // Hanya plot station yang ada di targetStations
+            // Hanya plot station yang ada di targetStations (optional filter)
+            // Note: Pastikan stations.geojson memiliki property stationID (case sensitive)
             filter: function(feature, layer) {
-                return targetStations.includes(feature.properties.stationId);
+                // stations.geojson menggunakan properti "stationID" (uppercase ID)
+                return targetStations.includes(feature.properties.stationID);
             },
             pointToLayer: function (feature, latlng) {
                 return L.circleMarker(latlng, {
@@ -132,6 +137,7 @@ async function loadStationData() {
                 });
             },
             onEachFeature: function (feature, layer) {
+                // [MODIFIKASI] Label dari properti location
                 if (feature.properties && feature.properties.location) {
                     // Tooltip (Label Permanen)
                     layer.bindTooltip(feature.properties.location, {
@@ -141,10 +147,10 @@ async function loadStationData() {
                     });
                     
                     // Popup detail saat diklik
+                    // Note: stations.geojson propertynya stationID, bukan stationId
                     layer.bindPopup(`
-                        <b>${feature.properties.station}</b><br>
-                        Loc: ${feature.properties.location}<br>
-                        ID: ${feature.properties.stationId}
+                        <b>${feature.properties.location}</b><br>
+                        ID: ${feature.properties.stationID}
                     `);
                 }
             }
@@ -154,20 +160,19 @@ async function loadStationData() {
         loadCurrentDashboard();
 
     } catch (error) {
-        console.error("Gagal memuat station.geojson", error);
+        console.error("Gagal memuat stations.geojson", error);
     }
 }
 
-// Update: Menggunakan list label yang baru untuk dropdown
+// Populate Dropdown Historical
 function populateHistoricalDropdown() {
     const select = document.getElementById('station-select');
     
-    // Iterasi melalui objek stationLabels
     for (const id in stationLabels) {
         const label = stationLabels[id];
         const opt = document.createElement('option');
         opt.value = id;
-        opt.text = `${label} (${id})`; // Tampilkan Label dan ID
+        opt.text = `${label} (${id})`; 
         select.appendChild(opt);
     }
 
@@ -176,15 +181,14 @@ function populateHistoricalDropdown() {
     });
 }
 
-// Dashboard Current (Menggunakan daftar stasiun yang diperbarui)
+// Dashboard Current
 async function loadCurrentDashboard() {
     const container = document.getElementById('station-cards');
     container.innerHTML = ''; 
     
-    // Gunakan daftar targetStations dan label untuk iterasi
     const loopData = targetStations.map(id => ({ 
         stationId: id, 
-        station: stationLabels[id], // Gunakan label baru
+        station: stationLabels[id],
         location: stationLabels[id] 
     }));
 
@@ -192,12 +196,11 @@ async function loadCurrentDashboard() {
         const stationId = props.stationId;
         const stationName = props.station;
         
-        let lastData = { time: '-', rate: 'N/A' };
+        let lastData = { time: '-', rate: 'N/A', total: 'N/A' };
         let statusColor = 'bg-gray-100 border-gray-300'; 
         
         if (stationId) {
             try {
-                // Fetch local CSV for current condition with cache busting
                 const res = await fetch(`./data/${stationId}.csv?t=${new Date().getTime()}`);
                 if(res.ok) {
                     const text = await res.text();
@@ -205,12 +208,15 @@ async function loadCurrentDashboard() {
                     if(lines.length > 1) {
                         const lastLine = lines[lines.length - 1];
                         const parts = lastLine.split(','); 
+                        
+                        // [MODIFIKASI] Parsing CSV: datetime, precipRate, precipTotal
                         const dt = parts[0];
-                        const rate = parts[1]; // Ambil rate
+                        const rate = parts[1]; 
+                        const total = parts[2]; // Kolom ke-3
                         
                         lastData.time = dt;
-                        // Pastikan rate adalah angka sebelum formatting
-                        lastData.rate = rate && !isNaN(parseFloat(rate)) ? parseFloat(rate).toFixed(1) : 'N/A';
+                        lastData.rate = rate && !isNaN(parseFloat(rate)) ? parseFloat(rate).toFixed(1) : '0.0';
+                        lastData.total = total && !isNaN(parseFloat(total)) ? parseFloat(total).toFixed(1) : '0.0';
 
                         const rateVal = parseFloat(rate);
                         if (!isNaN(rateVal)) {
@@ -222,7 +228,7 @@ async function loadCurrentDashboard() {
                     }
                 }
             } catch (e) {
-                // Ignore missing files
+                // Ignore
             }
         }
 
@@ -233,11 +239,21 @@ async function loadCurrentDashboard() {
                     <p class="text-xs text-slate-500 mb-2">ID: ${stationId}</p>
                 </div>
                 <div class="mt-2">
-                    <div class="flex items-end">
-                        <span class="text-3xl font-bold text-slate-700">${lastData.rate}</span>
-                        <span class="text-sm font-medium text-slate-500 mb-1 ml-1">mm/hr</span>
+                    <div class="flex items-end justify-between">
+                        <div>
+                            <div class="flex items-end">
+                                <span class="text-3xl font-bold text-slate-700">${lastData.rate}</span>
+                                <span class="text-sm font-medium text-slate-500 mb-1 ml-1">mm/hr</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                             <div class="flex flex-col items-end">
+                                <span class="text-xs text-gray-500 uppercase tracking-wider">Daily</span>
+                                <span class="text-lg font-bold text-slate-600">${lastData.total} <span class="text-xs font-normal">mm</span></span>
+                            </div>
+                        </div>
                     </div>
-                    <p class="text-xs text-gray-400 mt-1 text-right">${lastData.time}</p>
+                    <p class="text-xs text-gray-400 mt-2 border-t pt-1 text-right">${lastData.time}</p>
                 </div>
             </div>
         `;
@@ -274,14 +290,11 @@ async function loadHistoricalChart(stationId) {
             dataPoints.push(day.metric.precipTotal);     
         });
 
-        // Gunakan label dari list stasiun
         const chartLabel = stationLabels[stationId] || stationId;
         renderChart(chartLabel, labels, dataPoints);
 
     } catch (e) {
         console.error(e);
-        // Mengubah alert() menjadi console.error saja sesuai instruksi
-        // alert(`Gagal mengambil data dari API Weather.com untuk station ${stationId}.`); 
         console.error(`Gagal mengambil data dari API Weather.com untuk station ${stationId}.`);
     }
 }
