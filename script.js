@@ -314,7 +314,7 @@ function renderChart(label, labels, data) {
         data: {
             labels: labels,
             datasets: [{
-                label: `Daily Precipitation (mm) - ${label}`,
+                label: `Daily Precipitation (mm/day) - ${label}`,
                 data: data,
                 backgroundColor: 'rgba(16, 185, 129, 0.6)', 
                 borderColor: 'rgb(16, 185, 129)',
@@ -333,9 +333,10 @@ function renderChart(label, labels, data) {
             plugins: {
                 title: {
                     display: true,
-                    text: '7-Day Summary (Weather Underground)'
+                    text: '7-Day Summary'
                 }
             }
         }
     });
 }
+
