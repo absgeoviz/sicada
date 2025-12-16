@@ -16,7 +16,7 @@ const stationLabels = {
     "ITABAL11": "ROM 09",     
     "ITABAL1": "LW BUMA",
     "ITABAL16": "VP KOMODO",
-    "ITABAL5": "SP 2C WARA", 
+    "ITABAL5": "ROM 03 WARA", 
     "ITABAL13": "SP 2C WARA", 
     "ITABAL12": "SP 3 WARA",
     "ITABAL15": "WCC",  
@@ -339,4 +339,5 @@ function renderChart(label, labels, data) {
         }
     });
 }
+
 
