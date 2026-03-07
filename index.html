@@ -1,320 +1,1847 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="dark">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prediksi Cuaca Adaro (SiCaDa)</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SICADA - Weather Dashboard Adaro</title>
+  <meta name="description"
+    content="SICADA - Dashboard cuaca real-time Adaro. Monitor intensitas hujan, radar BMKG, dan data stasiun cuaca." />
 
-    <style>
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        #map { height: 500px; width: 100%; z-index: 0; }
-        .chart-container { position: relative; height: 50vh; width: 100%; }
-        
-        /* Style untuk Label Peta */
-        .map-label {
-            background: rgba(255, 255, 255, 0.8);
-            border: 1px solid #666;
-            border-radius: 4px;
-            padding: 2px 4px;
-            font-size: 10px;
-            font-weight: bold;
-            color: #333;
-            box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
-            white-space: nowrap; /* Penting agar label tidak pecah baris */
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              bg: '#0f1013',
+              amber: '#e3930e',
+              red: '#ed4343',
+              teal: '#0f9f73',
+              surface: '#1a1c21',
+              border: '#2a2d35',
+              muted: '#6b7280',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
         }
-        .leaflet-tooltip-pane .map-label {
-            margin-top: -10px; /* Adjust posisi label */
-        }
+      }
+    }
+  </script>
 
-        /* Modal Styles untuk Image Preview */
-        .modal {
-            display: none; /* Hidden by default */
-            position: fixed;
-            z-index: 1000; 
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.9); 
-            padding-top: 60px;
-        }
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
-        .modal-content {
-            margin: auto;
-            display: block;
-            width: 95%;
-            max-width: 1200px;
-            max-height: 95vh;
-            object-fit: contain; /* Memastikan gambar pas di dalam modal */
-        }
+  <!-- MapLibre GL JS -->
+  <link href="https://unpkg.com/maplibre-gl@4.1.3/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@4.1.3/dist/maplibre-gl.js"></script>
 
-        .close-btn {
-            position: absolute;
-            top: 15px;
-            right: 35px;
-            color: #f1f1f1;
-            font-size: 40px;
-            font-weight: bold;
-            transition: 0.3s;
-            cursor: pointer;
-        }
+  <!-- ApexCharts -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
-        .close-btn:hover,
-        .close-btn:focus {
-            color: #bbb;
-            text-decoration: none;
-            cursor: pointer;
-        }
+  <!-- PapaParse for CSV -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-        /* Style untuk container gambar agar terlihat clickable */
-        .image-container-clickable {
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .image-container-clickable:hover {
-            transform: scale(1.01);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-    </style>
+  <style>
+    body {
+      background-color: #0f1013;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    .maplibregl-popup-content {
+      background: #1a1c21;
+      border: 1px solid #2a2d35;
+      border-radius: 10px;
+      color: #e5e7eb;
+      padding: 12px 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    .maplibregl-popup-tip {
+      border-top-color: #1a1c21 !important;
+    }
+
+    .maplibregl-ctrl-group {
+      background: #1a1c21 !important;
+      border: 1px solid #2a2d35 !important;
+    }
+
+    .maplibregl-ctrl-group button {
+      background: #1a1c21 !important;
+      color: #e5e7eb !important;
+    }
+
+    .maplibregl-ctrl-group button+button {
+      border-top: 1px solid #2a2d35 !important;
+    }
+
+    .maplibregl-ctrl-attrib {
+      background: rgba(15, 16, 19, 0.85) !important;
+      color: #6b7280 !important;
+    }
+
+    .maplibregl-ctrl-attrib a {
+      color: #e3930e !important;
+    }
+
+    /*
+     * IMPORTANT: MapLibre GL positions markers using CSS `transform: translate3d(x,y,0)`
+     * on the element passed to `new maplibregl.Marker({ element })`. If that element
+     * has `transition: transform`, every pan/zoom re-position gets animated → lag.
+     * Fix: the WRAPPER element must have NO transform transition.
+     * A child element (.dot-inner) handles the hover scale independently.
+     */
+
+    /* ── Station marker outer wrapper (zero-size; no transitions!) ── */
+    .station-marker-wrap {
+      position: relative;
+      width: 0;
+      height: 0;
+      /* MapLibre anchors to this point */
+      cursor: pointer;
+    }
+
+    /* ── Red dot (inner visual, safe to animate) ── */
+    .dot-inner {
+      position: absolute;
+      top: -6px;
+      left: -6px;
+      /* Centre the 12px dot on the anchor point */
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #cd3f40;
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 0 0 3px rgba(205, 63, 64, 0.25);
+      transition: transform 0.18s ease;
+      /* safe: inner element only */
+      will-change: transform;
+    }
+
+    .station-marker-wrap:hover .dot-inner {
+      transform: scale(1.7);
+    }
+
+    /* ── Station name label floating right of the anchor ── */
+    .station-label {
+      position: absolute;
+      left: 9px;
+      top: -8px;
+      /* align near the red dot */
+      background: rgba(15, 16, 19, 0.82);
+      color: #e5e7eb;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      padding: 1px 5px;
+      border-radius: 4px;
+      white-space: nowrap;
+      pointer-events: none;
+      border: 1px solid rgba(205, 63, 64, 0.35);
+    }
+
+    /* ── Rain icon wrapper (outer, used as MapLibre marker — NO transform transition!) ── */
+    .rain-icon-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      /* NO transition: transform here — MapLibre moves this via transform */
+    }
+
+    /* Hover scale goes on the pill (inner), not the wrapper */
+    .rain-icon-wrap:hover .rain-pill {
+      transform: scale(1.08);
+    }
+
+    /* Pill badge: icon + label */
+    .rain-pill {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px 3px 5px;
+      border-radius: 999px;
+      border: 1.5px solid;
+      backdrop-filter: blur(6px);
+      font-size: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+      font-family: 'Inter', sans-serif;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      transition: transform 0.15s ease;
+      /* safe: inner element, MapLibre won't move it */
+    }
+
+    .pill-ringan {
+      background: rgba(15, 159, 115, 0.25);
+      border-color: #0f9f73;
+      color: #0f9f73;
+    }
+
+    .pill-sedang {
+      background: rgba(227, 147, 14, 0.25);
+      border-color: #e3930e;
+      color: #e3930e;
+    }
+
+    .pill-lebat {
+      background: rgba(249, 115, 22, 0.25);
+      border-color: #f97316;
+      color: #f97316;
+    }
+
+    .pill-sangat {
+      background: rgba(237, 67, 67, 0.25);
+      border-color: #ed4343;
+      color: #ed4343;
+    }
+
+    /* Pulse ring for heavy rain */
+    .rain-pulse {
+      position: absolute;
+      inset: -5px;
+      border-radius: 999px;
+      border: 1.5px solid;
+      animation: pulse-out 2s ease-out infinite;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .pill-lebat .rain-pulse {
+      border-color: #f97316;
+    }
+
+    .pill-sangat .rain-pulse {
+      border-color: #ed4343;
+    }
+
+    @keyframes pulse-out {
+      0% {
+        transform: scale(0.85);
+        opacity: 0.7;
+      }
+
+      100% {
+        transform: scale(1.6);
+        opacity: 0;
+      }
+    }
+
+    /* Layer control panel */
+    #layer-control {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(26, 28, 33, 0.95);
+      border: 1px solid #2a2d35;
+      border-radius: 12px;
+      z-index: 10;
+      min-width: 200px;
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+    }
+
+    #layer-control-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #layer-control-header:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    #layer-control-body {
+      padding: 0 12px 12px;
+      border-top: 1px solid #2a2d35;
+    }
+
+    #layer-control-body.collapsed {
+      display: none;
+    }
+
+    #toggle-arrow {
+      transition: transform 0.25s ease;
+    }
+
+    #toggle-arrow.collapsed {
+      transform: rotate(-90deg);
+    }
+
+    /* Tab active line */
+    .tab-btn.active {
+      color: #e3930e;
+      border-bottom: 2px solid #e3930e;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #1a1c21;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #2a2d35;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #e3930e;
+    }
+
+    /* Chart container */
+    .chart-card {
+      background: #1a1c21;
+      border: 1px solid #2a2d35;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    /* Responsive map height */
+    #map-container {
+      height: 65vh;
+      min-height: 360px;
+    }
+
+    @media (min-width: 768px) {
+      #map-container {
+        height: 75vh;
+      }
+    }
+
+    /* Legend */
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    /* Refresh indicator */
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .spinning {
+      animation: spin 1s linear infinite;
+    }
+
+    /* Station table */
+    .station-row:hover {
+      background: rgba(227, 147, 14, 0.08);
+    }
+
+    /* ── Radar Controls ── */
+    .radar-control-panel {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      z-index: 5;
+      background: rgba(15, 16, 19, 0.85);
+      backdrop-filter: blur(10px);
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #2a2d35;
+      width: 220px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .radar-time {
+      font-size: 16px;
+      font-weight: 700;
+      color: #e5e7eb;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 1px;
+    }
+
+    .radar-tz {
+      font-size: 10px;
+      color: #6b7280;
+      margin-left: 4px;
+    }
+
+    .radar-btn {
+      background: rgba(227, 147, 14, 0.15);
+      border: 1px solid #e3930e;
+      color: #e3930e;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .radar-btn:hover {
+      background: rgba(227, 147, 14, 0.25);
+    }
+
+    .radar-btn.paused {
+      background: rgba(15, 159, 115, 0.15);
+      border-color: #0f9f73;
+      color: #0f9f73;
+    }
+
+    .radar-btn.paused:hover {
+      background: rgba(15, 159, 115, 0.25);
+    }
+
+    .radar-progress-bg {
+      width: 100%;
+      background: #2a2d35;
+      height: 3px;
+      border-radius: 1.5px;
+      overflow: hidden;
+      margin-top: 2px;
+    }
+
+    #radar-progress {
+      width: 100%;
+      height: 100%;
+      background: #e3930e;
+      transition: width 0.3s linear;
+    }
+
+    /* ── Radar Legend ── */
+    .radar-legend-bar {
+      display: flex;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 4px 0;
+      border: 1px solid #2a2d35;
+    }
+
+    .radar-legend-tick {
+      flex: 1;
+      height: 100%;
+    }
+
+    .radar-legend-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 8px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
+    /* ── Lightbox ── */
+    #lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.88);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(6px);
+    }
+
+    #lightbox.open {
+      display: flex;
+    }
+
+    #lightbox img {
+      max-width: 94vw;
+      max-height: 90vh;
+      border-radius: 10px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+      animation: lb-in 0.2s ease;
+    }
+
+    @keyframes lb-in {
+      from {
+        opacity: 0;
+        transform: scale(0.93);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    #lightbox-close {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      color: #e5e7eb;
+      font-size: 32px;
+      cursor: pointer;
+      line-height: 1;
+      opacity: 0.75;
+      user-select: none;
+    }
+
+    #lightbox-close:hover {
+      opacity: 1;
+    }
+
+    .forecast-img {
+      cursor: zoom-in;
+      border-radius: 8px;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    .forecast-img:hover {
+      opacity: 0.88;
+      transform: scale(1.01);
+    }
+  </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans">
 
-    <!-- Navbar -->
-    <nav class="bg-emerald-700 text-white shadow-lg sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center">
-                    <i class="fa-solid fa-cloud-showers-heavy text-2xl mr-3"></i>
-                    <span class="font-bold text-xl tracking-wide">Prediksi Cuaca Adaro (SiCaDa)</span>
-                </div>
-            </div>
-        </div>
-    </nav>
+<body class="font-sans text-gray-200 min-h-screen" style="background:#0f1013">
 
-    <!-- Tab Navigation -->
-    <div class="bg-white shadow">
-        <div class="max-w-7xl mx-auto">
-            <div class="flex justify-around sm:justify-start">
-                <button onclick="switchTab('current')" id="tab-current" class="tab-btn flex-1 sm:flex-none py-4 px-6 text-center text-emerald-600 border-b-2 border-emerald-600 font-medium focus:outline-none">
-                    Current
-                </button>
-                <button onclick="switchTab('historical')" id="tab-historical" class="tab-btn flex-1 sm:flex-none py-4 px-6 text-center text-gray-500 hover:text-emerald-600 font-medium focus:outline-none">
-                    Historical
-                </button>
-                <button onclick="switchTab('forecast')" id="tab-forecast" class="tab-btn flex-1 sm:flex-none py-4 px-6 text-center text-gray-500 hover:text-emerald-600 font-medium focus:outline-none">
-                    Forecast
-                </button>
-            </div>
+  <!-- ===== HEADER ===== -->
+  <header class="sticky top-0 z-50 border-b border-brand-border"
+    style="background:rgba(15,16,19,0.95);backdrop-filter:blur(12px)">
+    <div class="max-w-screen-xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <!-- Logo / Icon -->
+        <div class="w-9 h-9 rounded-lg flex items-center justify-center"
+          style="background:linear-gradient(135deg,#e3930e,#ed4343)">
+          <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+          </svg>
         </div>
+        <div>
+          <h1 class="text-base font-bold tracking-wider" style="color:#e3930e">SICADA</h1>
+          <p class="text-xs text-gray-500 -mt-0.5">Prediksi Cuaca Adaro</p>
+        </div>
+      </div>
+
+      <!-- Status + Refresh -->
+      <div class="flex items-center gap-3">
+        <div id="last-update" class="hidden sm:flex items-center gap-1.5 text-xs text-gray-400">
+          <span class="w-2 h-2 rounded-full bg-brand-teal inline-block" style="animation:pulse 2s infinite"></span>
+          <span>Live</span>
+        </div>
+        <button id="refresh-btn" onclick="doFullRefresh()"
+          class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all"
+          style="background:#1a1c21;border:1px solid #2a2d35;color:#e3930e" title="Refresh data">
+          <svg id="refresh-icon" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span class="hidden sm:inline">Refresh</span>
+        </button>
+        <span id="countdown-badge" class="text-xs px-2 py-1 rounded-md"
+          style="background:#1a1c21;border:1px solid #2a2d35;color:#6b7280;font-variant-numeric:tabular-nums">5:00</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== NAV TABS ===== -->
+  <nav class="border-b border-brand-border sticky top-14 z-40"
+    style="background:rgba(15,16,19,0.95);backdrop-filter:blur(12px)">
+    <div class="max-w-screen-xl mx-auto px-4 flex gap-1">
+      <button
+        class="tab-btn active py-3 px-4 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5"
+        onclick="switchTab('map')" id="tab-map">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+        </svg>
+        Peta Cuaca
+      </button>
+      <button
+        class="tab-btn py-3 px-4 text-sm font-medium border-b-2 border-transparent text-gray-400 transition-colors flex items-center gap-1.5"
+        onclick="switchTab('history')" id="tab-history">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+        History
+      </button>
+      <button
+        class="tab-btn py-3 px-4 text-sm font-medium border-b-2 border-transparent text-gray-400 transition-colors flex items-center gap-1.5"
+        onclick="switchTab('forecast')" id="tab-forecast">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+        </svg>
+        Forecast
+      </button>
+      <button
+        class="tab-btn py-3 px-4 text-sm font-medium border-b-2 border-transparent text-gray-400 transition-colors flex items-center gap-1.5"
+        onclick="switchTab('stations')" id="tab-stations">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+        </svg>
+        Stasiun
+      </button>
+    </div>
+  </nav>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="max-w-screen-xl mx-auto px-4 py-4">
+
+    <!-- ===== TAB: MAP ===== -->
+    <div id="panel-map" class="tab-panel">
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4" id="summary-cards">
+        <div class="rounded-xl p-3 border border-brand-border" style="background:#1a1c21">
+          <p class="text-xs text-gray-500 mb-1">Total Stasiun</p>
+          <p class="text-2xl font-bold" style="color:#e3930e" id="card-total">—</p>
+        </div>
+        <div class="rounded-xl p-3 border border-brand-border" style="background:#1a1c21">
+          <p class="text-xs text-gray-500 mb-1">Hujan Lebat</p>
+          <p class="text-2xl font-bold" style="color:#ed4343" id="card-heavy">—</p>
+        </div>
+        <div class="rounded-xl p-3 border border-brand-border" style="background:#1a1c21">
+          <p class="text-xs text-gray-500 mb-1">Hujan Ringan</p>
+          <p class="text-2xl font-bold" style="color:#0f9f73" id="card-light">—</p>
+        </div>
+        <div class="rounded-xl p-3 border border-brand-border" style="background:#1a1c21">
+          <p class="text-xs text-gray-500 mb-1">Max Rate (mm/h)</p>
+          <p class="text-2xl font-bold text-gray-200" id="card-maxrate">—</p>
+        </div>
+      </div>
+
+      <!-- Map -->
+      <div id="map-container" class="rounded-xl overflow-hidden border border-brand-border relative">
+        <div id="map"></div>
+
+        <!-- Layer Control (Collapsible) -->
+        <div id="layer-control">
+          <!-- Header / toggle button -->
+          <div id="layer-control-header" onclick="toggleLayerPanel()">
+            <div class="flex items-center gap-2">
+              <svg class="w-3.5 h-3.5" style="color:#e3930e" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+              <span class="text-xs font-semibold uppercase tracking-wider" style="color:#e3930e">Layer Control</span>
+            </div>
+            <svg id="toggle-arrow" class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+
+          <!-- Collapsible body -->
+          <div id="layer-control-body">
+            <p class="text-xs font-semibold text-gray-400 mt-3 mb-2 uppercase tracking-wider">Basemap</p>
+            <div class="flex flex-col gap-1.5 mb-3">
+              <label class="flex items-center gap-2 cursor-pointer text-sm">
+                <input type="radio" name="basemap" value="osm" checked onchange="switchBasemap('osm')"
+                  class="accent-amber-500"> OpenStreetMap
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer text-sm">
+                <input type="radio" name="basemap" value="satellite" onchange="switchBasemap('satellite')"
+                  class="accent-amber-500"> Google Satellite
+              </label>
+            </div>
+            <hr class="border-brand-border mb-3" />
+            <p class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">Overlay</p>
+            <div class="flex flex-col gap-1.5 mb-3">
+              <label class="flex items-center gap-2 cursor-pointer text-sm">
+                <input type="checkbox" id="toggle-radar" checked onchange="toggleLayer('radar')"
+                  class="accent-amber-500 w-4 h-4"> Radar BMKG
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer text-sm">
+                <input type="checkbox" id="toggle-stations" checked onchange="toggleLayer('stations')"
+                  class="accent-amber-500 w-4 h-4"> Stasiun Cuaca
+              </label>
+            </div>
+            <hr class="border-brand-border mb-3" />
+            <!-- Legend (populated by JS via rainPillHTML() -- same as map markers) -->
+            <p class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">Legenda</p>
+            <div class="flex flex-col gap-2" id="legend-rain">
+              <!-- filled by buildLegend() in JS -->
+            </div>
+            <hr class="border-brand-border my-3" />
+            <p class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider text-amber-500/80">Intensitas
+              Radar</p>
+            <div id="legend-radar-container" class="px-1">
+              <div class="radar-legend-bar">
+                <div class="radar-legend-tick" style="background-color: rgb(1, 209, 248);"></div>
+                <div class="radar-legend-tick" style="background-color: rgb(2, 78, 252);"></div>
+                <div class="radar-legend-tick" style="background-color: rgb(2, 128, 134);"></div>
+                <div class="radar-legend-tick" style="background-color: rgb(0, 230, 0);"></div>
+                <div class="radar-legend-tick" style="background-color: rgb(0, 178, 0);"></div>
+                <div class="radar-legend-tick" style="background-color: rgb(129, 204, 0);"></div>
+                <div class="radar-legend-tick" style="background-color: rgb(255, 225, 3);"></div>
+                <div class="radar-legend-tick" style="background-color: rgb(249, 162, 5);"></div>
+                <div class="radar-legend-tick" style="background-color: rgb(250, 58, 7);"></div>
+                <div class="radar-legend-tick" style="background-color: rgb(204, 15, 1);"></div>
+                <div class="radar-legend-tick" style="background-color: rgb(176, 1, 1);"></div>
+                <div class="radar-legend-tick" style="background-color: rgb(196, 0, 255);"></div>
+                <div class="radar-legend-tick" style="background-color: rgb(205, 0, 141);"></div>
+              </div>
+              <div class="radar-legend-labels"><span>Ringan</span><span>Sedang</span><span>Lebat</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Radar Controls -->
+        <div id="radar-control-panel" class="radar-control-panel">
+          <div class="flex justify-between items-center">
+            <span class="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Radar Reflectivity</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div><span id="radar-time-val" class="radar-time">--:--</span><span class="radar-tz">WITA</span></div>
+            <button id="btn-radar-play" class="radar-btn" onclick="toggleRadarAnimation()">
+              <svg id="icon-play" class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+              <svg id="icon-pause" class="w-3 h-3 hidden" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+              </svg>
+              <span id="text-play">MULAI</span>
+            </button>
+          </div>
+          <div class="radar-progress-bg">
+            <div id="radar-progress"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rainfall Category Table -->
+      <div class="mt-4 rounded-xl border border-brand-border overflow-hidden" style="background:#1a1c21">
+        <div class="p-3 border-b border-brand-border">
+          <h3 class="text-sm font-semibold" style="color:#e3930e">Kategori Intensitas Hujan</h3>
+        </div>
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-xs text-gray-500 uppercase" style="background:#0f1013">
+              <th class="px-4 py-2">Kategori</th>
+              <th class="px-4 py-2">Intensitas (mm/jam)</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-brand-border">
+            <tr class="station-row">
+              <td class="px-4 py-2.5">Hujan Ringan</td>
+              <td class="px-4 py-2.5 text-brand-teal font-mono">1 – 5</td>
+            </tr>
+            <tr class="station-row">
+              <td class="px-4 py-2.5">Hujan Sedang</td>
+              <td class="px-4 py-2.5 text-brand-amber font-mono">5 – 10</td>
+            </tr>
+            <tr class="station-row">
+              <td class="px-4 py-2.5">Hujan Lebat</td>
+              <td class="px-4 py-2.5 font-mono" style="color:#f97316">10 – 20</td>
+            </tr>
+            <tr class="station-row">
+              <td class="px-4 py-2.5">Hujan Sangat Lebat</td>
+              <td class="px-4 py-2.5 text-brand-red font-mono">&gt; 20</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Station Dashboard Cards -->
+      <div class="mt-6">
+        <div class="flex items-center gap-2 mb-3">
+          <h2 class="text-sm font-semibold uppercase tracking-wider" style="color:#e3930e">&#128167; Current Rainfall
+            Intensity</h2>
+        </div>
+        <div id="station-cards" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          <div class="col-span-full text-center py-8 text-gray-500 text-sm">
+            <svg class="w-6 h-6 mx-auto mb-2 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Loading Station Data…
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-
-        <!-- PAGE: CURRENT -->
-        <div id="page-current" class="page-section space-y-6">
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <h2 class="text-lg font-bold mb-3 text-slate-700"><i class="fa-solid fa-map-location-dot mr-2"></i>Live Radar & Station Map</h2>
-                <div id="map" class="rounded border border-slate-200"></div>
-                <div class="mt-2 text-xs text-gray-500 flex justify-between">
-                    <span id="radar-timestamp">Radar Time: Loading...</span>
-                    <span>Auto-update: 10 min</span>
-                </div>
-            </div>
-            
-            <div>
-                <h2 class="text-lg font-bold mb-3 text-slate-700"><i class="fa-solid fa-droplet mr-2"></i>Current Rainfall Intensity</h2>
-                <div id="station-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    <!-- Cards will be injected here by JS -->
-                     <div class="col-span-full text-center py-10 text-gray-400">
-                        <i class="fa-solid fa-circle-notch fa-spin text-2xl"></i><br>Loading Station Data...
-                    </div>
-                </div>
-            </div>
+    <!-- ===== TAB: HISTORY ===== -->
+    <div id="panel-history" class="tab-panel hidden">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+        <div>
+          <h2 class="text-lg font-semibold" style="color:#e3930e">&#128200; 7-Day Rainfall Summary</h2>
+          <p class="text-xs text-gray-500 mt-0.5">Data source: Weather.com (PWS Daily Summary) • Semua stasiun dimuat
+            sekaligus</p>
         </div>
-
-        <!-- PAGE: HISTORICAL -->
-        <div id="page-historical" class="page-section hidden space-y-6">
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
-                    <h2 class="text-lg font-bold text-slate-700"><i class="fa-solid fa-chart-line mr-2"></i>7-Day Summary</h2>
-                    <select id="station-select" class="mt-2 sm:mt-0 block w-full sm:w-64 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-md border">
-                        <option value="">Pilih Station...</option>
-                        <!-- Options injected by JS based on manual list -->
-                    </select>
-                </div>
-                <div class="chart-container">
-                    <canvas id="historyChart"></canvas>
-                </div>
-                <p class="text-xs text-gray-400 mt-2 text-center">Data source: weather.com (PWS Daily Summary)</p>
-            </div>
-        </div>
-
-        <!-- PAGE: FORECAST -->
-        <div id="page-forecast" class="page-section hidden space-y-6">
-            <div class="bg-white rounded-lg shadow-md p-4 text-center">
-                <h2 class="text-lg font-bold mb-6 text-slate-700">Weather Forecast Maps</h2>
-                
-                <div class="flex flex-col space-y-8 max-w-4xl mx-auto">
-                    
-                    <!-- Image 1 -->
-                    <div class="border rounded-lg shadow-sm overflow-hidden image-container-clickable" onclick="openModal('./data/heatmap_CTNT.png', 'Area CTNT')">
-                        <div class="bg-slate-50 p-2 border-b text-left font-semibold text-slate-700">Area CTNT</div>
-                        <img src="./data/heatmap_CTNT.png" onerror="this.src='https://via.placeholder.com/800x400?text=heatmap_CTNT+Not+Found'" class="w-full h-auto" alt="Heatmap CTNT">
-                    </div>
-
-                    <!-- Image 2 -->
-                    <div class="border rounded-lg shadow-sm overflow-hidden image-container-clickable" onclick="openModal('./data/heatmap_SOUTH.png', 'Area SOUTH')">
-                        <div class="bg-slate-50 p-2 border-b text-left font-semibold text-slate-700">Area SOUTH</div>
-                        <img src="./data/heatmap_SOUTH.png" onerror="this.src='https://via.placeholder.com/800x400?text=heatmap_SOUTH+Not+Found'" class="w-full h-auto" alt="Heatmap SOUTH">
-                    </div>
-
-                    <!-- Image 3 -->
-                    <div class="border rounded-lg shadow-sm overflow-hidden image-container-clickable" onclick="openModal('./data/heatmap_WARA.png', 'Area WARA')">
-                        <div class="bg-slate-50 p-2 border-b text-left font-semibold text-slate-700">Area WARA</div>
-                        <img src="./data/heatmap_WARA.png" onerror="this.src='https://via.placeholder.com/800x400?text=heatmap_WARA+Not+Found'" class="w-full h-auto" alt="Heatmap WARA">
-                    </div>
-
-                </div>
-                <p class="mt-6 text-gray-500 text-sm">Forecast data diperbarui secara berkala.</p>
-            </div>
-        </div>
-
-    </main>
-
-    <!-- Image Modal for Fullscreen Preview -->
-    <div id="imageModal" class="modal">
-        <span class="close-btn" onclick="closeModal()">&times;</span>
-        <!-- Konten gambar di sini -->
-        <img class="modal-content" id="modalImage">
+        <button onclick="loadAllHistoricalCharts()"
+          class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all flex-shrink-0"
+          style="background:#1a1c21;border:1px solid #2a2d35;color:#e3930e" title="Muat ulang semua data">
+          <svg id="hist-refresh-icon" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Muat Ulang
+        </button>
+      </div>
+      <div id="hist-status" class="text-xs text-gray-500 mb-3 hidden">
+        <span id="hist-progress">Memuat data…</span>
+      </div>
+      <div id="hist-charts-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
     </div>
 
-    <!-- SCRIPT FOR MODAL FUNCTIONALITY (Ditempatkan sebelum script.js agar fungsi openModal tersedia) -->
-    <script>
-        // Zooming/Panning logic (Tambahan, jika diperlukan)
-        let isZoomed = false;
-        let scale = 1;
-        let currentX = 0;
-        let currentY = 0;
+    <!-- ===== TAB: FORECAST ===== -->
+    <div id="panel-forecast" class="tab-panel hidden">
+      <div class="mb-4">
+        <h2 class="text-lg font-semibold" style="color:#e3930e">Prakiraan Cuaca</h2>
+        <p class="text-xs text-gray-500 mt-0.5">Heatmap intensitas curah hujan</p>
+      </div>
+      <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div class="chart-card">
+          <h3 class="text-sm font-semibold mb-3 text-gray-300">CTNT</h3>
+          <img src="https://raw.githubusercontent.com/absgeoviz/dummy_data/main/heatmap_CTNT.png" alt="CTNT Forecast"
+            class="w-full forecast-img" onclick="openLightbox(this.src,'CTNT Forecast')" title="Click to enlarge" />
+          <p class="text-xs text-gray-500 mt-2">IBALAN17, ITABAL8, ITABAL9</p>
+        </div>
+        <div class="chart-card">
+          <h3 class="text-sm font-semibold mb-3 text-gray-300">SOUTH</h3>
+          <img src="https://raw.githubusercontent.com/absgeoviz/dummy_data/main/heatmap_SOUTH.png" alt="SOUTH Forecast"
+            class="w-full forecast-img" onclick="openLightbox(this.src,'SOUTH Forecast')" title="Click to enlarge" />
+          <p class="text-xs text-gray-500 mt-2">ITABAL1, IBALAN16, ITABAL11</p>
+        </div>
+        <div class="chart-card">
+          <h3 class="text-sm font-semibold mb-3 text-gray-300">WARA</h3>
+          <img src="https://raw.githubusercontent.com/absgeoviz/dummy_data/main/heatmap_WARA.png" alt="WARA Forecast"
+            class="w-full forecast-img" onclick="openLightbox(this.src,'WARA Forecast')" title="Click to enlarge" />
+          <p class="text-xs text-gray-500 mt-2">ITABAL5</p>
+        </div>
+      </div>
+    </div>
 
-        function openModal(src, title) {
-            const modal = document.getElementById('imageModal');
-            const modalImage = document.getElementById('modalImage');
-            
-            modalImage.src = src;
-            modal.style.display = 'block';
+    <!-- ===== TAB: STATIONS ===== -->
+    <div id="panel-stations" class="tab-panel hidden">
+      <div class="mb-4">
+        <h2 class="text-lg font-semibold" style="color:#e3930e">Data Stasiun Cuaca</h2>
+        <p class="text-xs text-gray-500 mt-0.5">Kondisi terkini – auto-refresh setiap 5 menit</p>
+      </div>
+      <div class="rounded-xl border border-brand-border overflow-x-auto" style="background:#1a1c21">
+        <table class="w-full text-sm min-w-max">
+          <thead>
+            <tr class="text-left text-xs text-gray-500 uppercase" style="background:#0f1013">
+              <th class="px-4 py-3">Lokasi</th>
+              <th class="px-4 py-3">Station ID</th>
+              <th class="px-4 py-3">Current Rate (mm/h)</th>
+              <th class="px-4 py-3">Daily Total (mm)</th>
+              <th class="px-4 py-3">Kondisi</th>
+              <th class="px-4 py-3">Update</th>
+            </tr>
+          </thead>
+          <tbody id="station-table-body" class="divide-y divide-brand-border">
+            <tr>
+              <td colspan="6" class="px-4 py-8 text-center text-gray-500 text-sm">Memuat data stasiun…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-            // Reset zoom state
-            isZoomed = false;
-            scale = 1;
-            currentX = 0;
-            currentY = 0;
-            modalImage.style.transform = `translate(0, 0) scale(1)`;
-            modalImage.style.cursor = 'zoom-in';
-            
-            // Tambahkan event listener untuk zoom (klik)
-            modalImage.onclick = toggleZoom;
+  </main>
+
+  <!-- ===== LIGHTBOX ===== -->
+  <div id="lightbox" onclick="closeLightbox()">
+    <span id="lightbox-close" onclick="closeLightbox()">&times;</span>
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()" />
+  </div>
+
+  <!-- ===== SCRIPTS ===== -->
+  <script>
+    // ─── Constants ────────────────────────────────────────────────────────────
+    const STATIONS_GEOJSON = './data/stations.geojson';
+    const DATA_DIR = './data/';
+    const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+    // Station ID → Display Label mapping (for Historical API fetch)
+    const stationLabels = {
+      "IBALAN23": "CSA HW6",
+      "ITABAL9": "ROM 19",
+      "ITABAL8": "ROM 20",
+      "IBALAN17": "ROM 13",
+      "ITABAL14": "VP SABANG",
+      "IBALAN16": "ROM 06",
+      "ITABAL11": "ROM 09",
+      "ITABAL1": "LW BUMA",
+      "ITABAL16": "VP KOMODO",
+      "ITABAL5": "ROM 03 WARA",
+      "ITABAL13": "SP 2C WARA",
+      "ITABAL12": "SP 3 WARA",
+      "ITABAL15": "WCC",
+      "IBALAN22": "LAB PRG",
+      "ITABAL10": "KM 67",
+      "ITABAL21": "KM 50",
+      "ITABAL18": "KM 43",
+      "IEASTB11": "KM 35",
+      "IEASTB117": "KM 29",
+      "IEASTB118": "KM 10",
+      "ISOUTH1402": "QCKLS"
+    };
+
+    // Rain thresholds (mm/h)
+    const RAIN = {
+      ringan: 1,   // 1 – 5
+      sedang: 5,   // 5 – 10
+      lebat: 10,   // 10 – 20
+      sangat_lebat: 20   // > 20
+    };
+
+    // Color palette
+    const COLORS = {
+      bg: '#0f1013', surface: '#1a1c21', border: '#2a2d35',
+      amber: '#e3930e', red: '#ed4343', teal: '#0f9f73', muted: '#6b7280',
+      text: '#e5e7eb'
+    };
+
+    // ─── State ────────────────────────────────────────────────────────────────
+    let map;
+    let dotMarkersMap = {}; // stationID -> maplibre Marker (grey dot, always on)
+    let rainMarkersMap = {}; // stationID -> maplibre Marker (rain pill, only when raining)
+    let stationFeatures = [];
+    let stationData = {}; // stationID -> {precipRate, precipTotal, datetime, allRows}
+    let radarLayer = null; // Legacy, kept for ref
+    let currentBasemap = 'osm';
+    let radarVisible = true;
+    let stationsVisible = true;
+    let apexCharts = {};
+    let countdownTimer = null;
+    let countdownSecs = REFRESH_INTERVAL_MS / 1000;
+    let layerPanelCollapsed = false;
+
+    // ─── Radar Animation State ────────────────────────────────────────────────
+    let radarFrames = [];
+    let currentRadarFrameIdx = 5;
+    let isRadarPlaying = false;
+    let radarAnimationInterval = null;
+
+    // ─── Timestamp for BMKG Radar ────────────────────────────────────────────
+    function formatToWITA(ts) {
+      if (!ts) return "--:--";
+      const y = parseInt(ts.substring(0, 4));
+      const m = parseInt(ts.substring(4, 6)) - 1;
+      const d = parseInt(ts.substring(6, 8));
+      const hh = parseInt(ts.substring(8, 10));
+      const mm = parseInt(ts.substring(10, 12));
+
+      const dateUTC = new Date(Date.UTC(y, m, d, hh, mm));
+      // Add 8 hours for WITA
+      const dateWITA = new Date(dateUTC.getTime() + (0 * 60 * 60 * 1000));
+
+      return String(dateWITA.getHours()).padStart(2, '0') + ":" +
+        String(dateWITA.getMinutes()).padStart(2, '0');
+    }
+
+    function generateRadarTimestamps() {
+      const tsList = [];
+      const now = new Date();
+      // BMKG radar usually has ~15 mins delay, we use 20 mins buffer here
+      const baseTime = new Date(Math.floor(now.getTime() / (10 * 60000)) * (10 * 60000) - 20 * 60000);
+
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date(baseTime.getTime() - (i * 10 * 60000));
+        const y = date.getUTCFullYear();
+        const mo = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const d = String(date.getUTCDate()).padStart(2, '0');
+        const h = String(date.getUTCHours()).padStart(2, '0');
+        const mi = String(date.getUTCMinutes()).padStart(2, '0');
+        tsList.push(`${y}${mo}${d}${h}${mi}`);
+      }
+      return tsList;
+    }
+
+    function getRadarURL(ts) {
+      return `https://inasiam.bmkg.go.id/api/tilerv3/tiles/radar:reflectivity:output=shaded:modelrun=${ts}:validtime=${ts}/{z}/{x}/{y}`;
+    }
+
+    // ─── Basemap sources ─────────────────────────────────────────────────────
+    const BASEMAP_STYLES = {
+      osm: {
+        type: 'raster',
+        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        tileSize: 256,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxzoom: 19
+      },
+      satellite: {
+        type: 'raster',
+        tiles: [
+          'https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+          'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+          'https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+          'https://mt3.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
+        ],
+        tileSize: 256,
+        attribution: '&copy; Google Satellite',
+        maxzoom: 20
+      }
+    };
+
+    // ─── Map Initialization ──────────────────────────────────────────────────
+    function initMap() {
+      map = new maplibregl.Map({
+        container: 'map',
+        style: {
+          version: 8,
+          glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+          sources: { basemap: BASEMAP_STYLES.satellite },
+          layers: [{ id: 'basemap-layer', type: 'raster', source: 'basemap', minzoom: 0, maxzoom: 22 }]
+        },
+        center: [115.4, -2.2],
+        zoom: 10,
+        attributionControl: false
+      });
+      currentBasemap = 'satellite';
+      // Sync radio button to match default
+      setTimeout(() => {
+        const radios = document.querySelectorAll('input[name="basemap"]');
+        radios.forEach(r => { r.checked = (r.value === 'satellite'); });
+      }, 0);
+
+      map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
+      map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+      map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+
+      map.on('load', () => {
+        addRadarLayer();
+        loadStations();
+      });
+    }
+
+    // ─── Basemap Switch ───────────────────────────────────────────────────────
+    function switchBasemap(type) {
+      currentBasemap = type;
+      if (!map.getSource('basemap')) return;
+      map.getSource('basemap').setTiles(BASEMAP_STYLES[type].tiles);
+    }
+
+    // ─── Radar Layer ─────────────────────────────────────────────────────────
+    function updateRadarFrameDisplay() {
+      if (!radarFrames || radarFrames.length === 0) return;
+      const currentTs = radarFrames[currentRadarFrameIdx];
+
+      // Hide all frames visually by opacity
+      radarFrames.forEach(ts => {
+        const layerId = `radar-layer-${ts}`;
+        if (map.getLayer(layerId)) {
+          map.setPaintProperty(layerId, 'raster-opacity', 0);
         }
+      });
 
-        function closeModal() {
-            document.getElementById('imageModal').style.display = 'none';
-            document.getElementById('modalImage').onclick = null; // Hapus event listener
+      // Show active frame if radar is toggled on
+      if (radarVisible && map.getLayer(`radar-layer-${currentTs}`)) {
+        map.setPaintProperty(`radar-layer-${currentTs}`, 'raster-opacity', 0.65);
+      }
+
+      // Update UI
+      document.getElementById('radar-time-val').textContent = formatToWITA(currentTs);
+      document.getElementById('radar-progress').style.width = `${((currentRadarFrameIdx + 1) / radarFrames.length) * 100}%`;
+    }
+
+    function addRadarLayer() {
+      // Clear previous layers/sources if any
+      if (radarFrames && radarFrames.length > 0) {
+        radarFrames.forEach(ts => {
+          if (map.getLayer(`radar-layer-${ts}`)) map.removeLayer(`radar-layer-${ts}`);
+          if (map.getSource(`radar-${ts}`)) map.removeSource(`radar-${ts}`);
+        });
+      }
+
+      radarFrames = generateRadarTimestamps();
+      currentRadarFrameIdx = radarFrames.length - 1; // latest
+
+      radarFrames.forEach(ts => {
+        map.addSource(`radar-${ts}`, {
+          type: 'raster',
+          tiles: [getRadarURL(ts)],
+          tileSize: 256,
+          attribution: '&copy; BMKG'
+        });
+        map.addLayer({
+          id: `radar-layer-${ts}`,
+          type: 'raster',
+          source: `radar-${ts}`,
+          paint: { 'raster-opacity': 0 }
+        });
+        if (!radarVisible) {
+          map.setLayoutProperty(`radar-layer-${ts}`, 'visibility', 'none');
         }
+      });
 
-        function toggleZoom(event) {
-            const modalImage = document.getElementById('modalImage');
-            
-            if (isZoomed) {
-                // Zoom out
-                isZoomed = false;
-                scale = 1;
-                currentX = 0;
-                currentY = 0;
-                modalImage.style.transform = `translate(0, 0) scale(1)`;
-                modalImage.style.cursor = 'zoom-in';
-                modalImage.removeEventListener('mousedown', startPan);
+      updateRadarFrameDisplay();
+    }
+
+    function toggleLayer(name) {
+      if (name === 'radar') {
+        radarVisible = !radarVisible;
+        if (radarFrames) {
+          radarFrames.forEach(ts => {
+            const layerId = `radar-layer-${ts}`;
+            if (map.getLayer(layerId)) {
+              map.setLayoutProperty(layerId, 'visibility', radarVisible ? 'visible' : 'none');
+            }
+          });
+        }
+        if (radarVisible) {
+          updateRadarFrameDisplay();
+        }
+      } else if (name === 'stations') {
+        stationsVisible = !stationsVisible;
+        Object.values(dotMarkersMap).forEach(m => {
+          stationsVisible ? m.addTo(map) : m.remove();
+        });
+        Object.values(rainMarkersMap).forEach(m => {
+          stationsVisible ? m.addTo(map) : m.remove();
+        });
+      }
+    }
+
+    function toggleRadarAnimation() {
+      const btn = document.getElementById('btn-radar-play');
+      const iconPlay = document.getElementById('icon-play');
+      const iconPause = document.getElementById('icon-pause');
+      const textPlay = document.getElementById('text-play');
+
+      isRadarPlaying = !isRadarPlaying;
+      if (isRadarPlaying) {
+        textPlay.textContent = "PAUSE";
+        iconPlay.classList.add('hidden');
+        iconPause.classList.remove('hidden');
+        btn.classList.add('paused');
+
+        radarAnimationInterval = setInterval(() => {
+          currentRadarFrameIdx = (currentRadarFrameIdx + 1) % radarFrames.length;
+          updateRadarFrameDisplay();
+        }, 1500);
+      } else {
+        textPlay.textContent = "MULAI";
+        iconPause.classList.add('hidden');
+        iconPlay.classList.remove('hidden');
+        btn.classList.remove('paused');
+        clearInterval(radarAnimationInterval);
+      }
+    }
+
+    // ─── Layer Panel Toggle ───────────────────────────────────────────────────
+    function toggleLayerPanel() {
+      layerPanelCollapsed = !layerPanelCollapsed;
+      const body = document.getElementById('layer-control-body');
+      const arrow = document.getElementById('toggle-arrow');
+      if (layerPanelCollapsed) {
+        body.classList.add('collapsed');
+        arrow.classList.add('collapsed');
+      } else {
+        body.classList.remove('collapsed');
+        arrow.classList.remove('collapsed');
+      }
+    }
+
+    // ─── Rain Classification (4 classes) ─────────────────────────────────────
+    function classifyRain(rate) {
+      if (rate >= RAIN.sangat_lebat) return 'sangat';
+      if (rate >= RAIN.lebat) return 'lebat';
+      if (rate >= RAIN.sedang) return 'sedang';
+      if (rate >= RAIN.ringan) return 'ringan';
+      return 'none';
+    }
+
+    // Maps class -> {label, emoji, pillClass}
+    const RAIN_META = {
+      ringan: { label: 'Ringan', emoji: '\uD83D\uDCA7', pill: 'pill-ringan' },
+      sedang: { label: 'Sedang', emoji: '\uD83C\uDF27', pill: 'pill-sedang' },
+      lebat: { label: 'Lebat', emoji: '\u26C8\uFE0F', pill: 'pill-lebat' },
+      sangat: { label: 'Sgt Lebat', emoji: '\uD83C\uDF0A', pill: 'pill-sangat' }
+    };
+
+    function rainPillHTML(cls) {
+      if (cls === 'none') return null;
+      const m = RAIN_META[cls];
+      // Pulse ring only for heavy classes
+      const pulse = (cls === 'lebat' || cls === 'sangat')
+        ? '<span class="rain-pulse"></span>' : '';
+      return `<div class="rain-icon-wrap">
+        <div class="rain-pill ${m.pill}">${pulse}<span>${m.emoji}</span><span>${m.label}</span></div>
+      </div>`;
+    }
+
+    // ─── Popup Content ────────────────────────────────────────────────────────
+    function buildPopupHTML(feature, data) {
+      const loc = feature.properties.location || feature.properties.stationID;
+      const sid = feature.properties.stationID;
+      const rate = data ? parseFloat(data.precipRate).toFixed(1) : '—';
+      const total = data ? parseFloat(data.precipTotal).toFixed(1) : '—';
+      const dt = data ? data.datetime : '—';
+      const cls = data ? classifyRain(parseFloat(data.precipRate)) : 'none';
+
+      const BADGE_STYLES = {
+        ringan: 'background:rgba(15,159,115,0.2);color:#0f9f73;border:1px solid #0f9f73',
+        sedang: 'background:rgba(227,147,14,0.2);color:#e3930e;border:1px solid #e3930e',
+        lebat: 'background:rgba(249,115,22,0.2);color:#f97316;border:1px solid #f97316',
+        sangat: 'background:rgba(237,67,67,0.2);color:#ed4343;border:1px solid #ed4343',
+        none: 'background:rgba(107,114,128,0.2);color:#6b7280;border:1px solid #6b7280'
+      };
+      const BADGE_LABELS = {
+        ringan: '\uD83D\uDCA7 Hujan Ringan',
+        sedang: '\uD83C\uDF27 Hujan Sedang',
+        lebat: '\u26C8\uFE0F Hujan Lebat',
+        sangat: '\uD83C\uDF0A Hujan Sangat Lebat',
+        none: '\u2601\uFE0F Tidak Hujan'
+      };
+      const badge = `<span style="${BADGE_STYLES[cls]}" class="px-2 py-0.5 rounded-full text-xs font-semibold">${BADGE_LABELS[cls]}</span>`;
+
+      return `
+      <div style="min-width:190px">
+        <div style="margin-bottom:8px">
+          <strong style="color:#e3930e;font-size:14px;display:block;margin-bottom:4px">${loc}</strong>
+          ${badge}
+        </div>
+        <p style="font-size:11px;color:#6b7280;margin-bottom:8px">${sid}</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:#0f1013;border-radius:8px;padding:8px">
+            <p style="font-size:10px;color:#6b7280;margin-bottom:2px">Current Rate</p>
+            <p style="font-size:18px;font-weight:700;color:#e5e7eb">${rate}</p>
+            <p style="font-size:10px;color:#6b7280">mm/jam</p>
+          </div>
+          <div style="background:#0f1013;border-radius:8px;padding:8px">
+            <p style="font-size:10px;color:#6b7280;margin-bottom:2px">Daily Total</p>
+            <p style="font-size:18px;font-weight:700;color:#e5e7eb">${total}</p>
+            <p style="font-size:10px;color:#6b7280">mm/hari</p>
+          </div>
+        </div>
+        <p style="font-size:10px;color:#6b7280;margin-top:8px">\u23F1 ${dt}</p>
+      </div>`;
+    }
+
+    // ─── Load Stations ────────────────────────────────────────────────────────
+    async function loadStations() {
+      let geojson;
+      try {
+        const res = await fetch(STATIONS_GEOJSON);
+        geojson = await res.json();
+      } catch (e) {
+        console.error('Failed to load stations.geojson', e);
+        return;
+      }
+      stationFeatures = geojson.features;
+
+      // Clear existing markers
+      Object.values(dotMarkersMap).forEach(m => m.remove());
+      Object.values(rainMarkersMap).forEach(m => m.remove());
+      dotMarkersMap = {};
+      rainMarkersMap = {};
+      stationData = {};
+
+      // Load all CSVs in parallel
+      await Promise.allSettled(stationFeatures.map(f => loadStationCSV(f.properties.stationID)));
+
+      // Place dual markers for each station
+      stationFeatures.forEach(f => {
+        const sid = f.properties.stationID;
+        const coords = [f.geometry.coordinates[0], f.geometry.coordinates[1]];
+        const data = stationData[sid];
+        const rate = data ? parseFloat(data.precipRate) : 0;
+        const cls = classifyRain(rate);
+
+        // ── 1. Red dot + station name label (always visible) ─────────
+        // Wrapper: zero-size, NO CSS transform transition (MapLibre uses transform to position)
+        const dotEl = document.createElement('div');
+        dotEl.className = 'station-marker-wrap';
+        dotEl.title = f.properties.location;
+
+        // Inner dot: safe to animate (MapLibre doesn't move this element)
+        const dotInner = document.createElement('div');
+        dotInner.className = 'dot-inner';
+        dotEl.appendChild(dotInner);
+
+        // Station name label
+        const labelEl = document.createElement('span');
+        labelEl.className = 'station-label';
+        labelEl.textContent = f.properties.location || sid;
+        dotEl.appendChild(labelEl);
+
+        const popup = new maplibregl.Popup({ offset: 8, closeButton: true, maxWidth: '260px' })
+          .setHTML(buildPopupHTML(f, data));
+
+        // anchor 'top-left' matches the 0×0 wrapper origin; the inner dot is centred via CSS
+        const dotMarker = new maplibregl.Marker({ element: dotEl, anchor: 'top-left' })
+          .setLngLat(coords)
+          .setPopup(popup);
+
+        if (stationsVisible) dotMarker.addTo(map);
+        dotMarkersMap[sid] = dotMarker;
+
+        // ── 2. Rain pill (only when it is raining) ───────────────────
+        if (cls !== 'none') {
+          const pillHTML = rainPillHTML(cls);
+          if (pillHTML) {
+            const pillEl = document.createElement('div');
+            pillEl.innerHTML = pillHTML;
+
+            const pillPopup = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: '260px' })
+              .setHTML(buildPopupHTML(f, data));
+
+            // Anchor 'bottom' centres the pill horizontally and places anchor at its bottom
+            // Offset slightly upward so pill visually floats above the dot
+            const rainMarker = new maplibregl.Marker({ element: pillEl, anchor: 'bottom', offset: [0, -8] })
+              .setLngLat(coords)
+              .setPopup(pillPopup);
+
+            if (stationsVisible) rainMarker.addTo(map);
+            rainMarkersMap[sid] = rainMarker;
+          }
+        }
+      });
+
+      updateSummaryCards();
+      updateStationTable(stationFeatures);
+      updateStationCards();
+    }
+
+    // ─── Load Station CSV ────────────────────────────────────────────────────
+    function loadStationCSV(stationID) {
+      return new Promise((resolve) => {
+        Papa.parse(`${DATA_DIR}${stationID}.csv`, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            const rows = results.data;
+            if (rows.length > 0) {
+              // Use the last row as "latest"
+              const last = rows[rows.length - 1];
+              stationData[stationID] = {
+                precipRate: parseFloat(last.precipRate) || 0,
+                precipTotal: parseFloat(last.precipTotal) || 0,
+                datetime: last.datetime || '',
+                allRows: rows
+              };
             } else {
-                // Zoom in ke posisi klik
-                isZoomed = true;
-                scale = 2; // Perbesar 2x
-                
-                // Hitung posisi klik relatif terhadap gambar
-                const rect = modalImage.getBoundingClientRect();
-                const clickX = event.clientX - rect.left;
-                const clickY = event.clientY - rect.top;
-                
-                const centerX = rect.width / 2;
-                const centerY = rect.height / 2;
-                
-                // Hitung translasi agar titik klik berada di tengah layar
-                currentX = (centerX - clickX) * scale / 2;
-                currentY = (centerY - clickY) * scale / 2;
-                
-                modalImage.style.transform = `translate(${currentX}px, ${currentY}px) scale(${scale})`;
-                modalImage.style.cursor = 'grab';
-                
-                // Tambahkan event listener untuk pan
-                modalImage.addEventListener('mousedown', startPan);
+              stationData[stationID] = { precipRate: 0, precipTotal: 0, datetime: '', allRows: [] };
             }
-        }
-        
-        // Pan logic
-        let isPanning = false;
-        let startX, startY;
-        let initialX, initialY;
+            resolve();
+          },
+          error: () => {
+            stationData[stationID] = { precipRate: 0, precipTotal: 0, datetime: '', allRows: [] };
+            resolve();
+          }
+        });
+      });
+    }
 
-        function startPan(e) {
-            e.preventDefault();
-            if (!isZoomed) return;
-            isPanning = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            initialX = currentX;
-            initialY = currentY;
-            document.addEventListener('mousemove', panImage);
-            document.addEventListener('mouseup', stopPan);
-            document.getElementById('modalImage').style.cursor = 'grabbing';
+    // ─── Update Summary Cards ─────────────────────────────────────────────────
+    function updateSummaryCards() {
+      const all = Object.values(stationData);
+      const heavy = all.filter(d => { const c = classifyRain(d.precipRate); return c === 'lebat' || c === 'sangat'; }).length;
+      const light = all.filter(d => { const c = classifyRain(d.precipRate); return c === 'ringan' || c === 'sedang'; }).length;
+      const maxRate = all.reduce((m, d) => Math.max(m, d.precipRate), 0);
+
+      document.getElementById('card-total').textContent = all.length;
+      document.getElementById('card-heavy').textContent = heavy;
+      document.getElementById('card-light').textContent = light;
+      document.getElementById('card-maxrate').textContent = maxRate.toFixed(1);
+    }
+
+    // ─── Station Table ────────────────────────────────────────────────────────
+    function updateStationTable(features) {
+      const tbody = document.getElementById('station-table-body');
+      if (!features || features.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">Tidak ada data</td></tr>';
+        return;
+      }
+
+      const rows = features.map(f => {
+        const sid = f.properties.stationID;
+        const loc = f.properties.location || sid;
+        const d = stationData[sid] || {};
+        const rate = (d.precipRate || 0).toFixed(1);
+        const total = (d.precipTotal || 0).toFixed(1);
+        const dt = d.datetime || '—';
+        const cls = classifyRain(d.precipRate || 0);
+        const COND_BADGE = {
+          ringan: `<span style="background:rgba(15,159,115,0.2);color:#0f9f73;border:1px solid #0f9f73" class="px-2 py-0.5 rounded-full text-xs">&#128167; Ringan</span>`,
+          sedang: `<span style="background:rgba(227,147,14,0.2);color:#e3930e;border:1px solid #e3930e" class="px-2 py-0.5 rounded-full text-xs">&#127783; Sedang</span>`,
+          lebat: `<span style="background:rgba(249,115,22,0.2);color:#f97316;border:1px solid #f97316" class="px-2 py-0.5 rounded-full text-xs">&#9928; Lebat</span>`,
+          sangat: `<span style="background:rgba(237,67,67,0.2);color:#ed4343;border:1px solid #ed4343" class="px-2 py-0.5 rounded-full text-xs">&#127754; Sgt Lebat</span>`,
+          none: `<span style="background:rgba(107,114,128,0.2);color:#6b7280;border:1px solid #6b7280" class="px-2 py-0.5 rounded-full text-xs">&#9729; Cerah</span>`
+        };
+        const RATE_COLOR = { ringan: '#0f9f73', sedang: '#e3930e', lebat: '#f97316', sangat: '#ed4343', none: '#6b7280' };
+        return `<tr class="station-row cursor-pointer" onclick="focusStation('${sid}')">
+          <td class="px-4 py-3 font-medium">${loc}</td>
+          <td class="px-4 py-3 text-gray-400 font-mono text-xs">${sid}</td>
+          <td class="px-4 py-3 font-mono" style="color:${RATE_COLOR[cls]}">${rate}</td>
+          <td class="px-4 py-3 font-mono text-gray-300">${total}</td>
+          <td class="px-4 py-3">${COND_BADGE[cls]}</td>
+          <td class="px-4 py-3 text-xs text-gray-500">${dt}</td>
+        </tr>`;
+      }).join('');
+
+      tbody.innerHTML = rows;
+    }
+
+    // ─── Station Dashboard Cards ──────────────────────────────────────────────
+    function updateStationCards() {
+      const container = document.getElementById('station-cards');
+      if (!container) return;
+
+      const CARD_STATUS = {
+        sangat: { border: '#ed4343', bg: 'rgba(237,67,67,0.08)', label: '🌊 Sgt Lebat', labelColor: '#ed4343' },
+        lebat: { border: '#f97316', bg: 'rgba(249,115,22,0.08)', label: '⛈️ Lebat', labelColor: '#f97316' },
+        sedang: { border: '#e3930e', bg: 'rgba(227,147,14,0.08)', label: '🌧 Sedang', labelColor: '#e3930e' },
+        ringan: { border: '#0f9f73', bg: 'rgba(15,159,115,0.08)', label: '💧 Ringan', labelColor: '#0f9f73' },
+        none: { border: '#2a2d35', bg: 'rgba(26,28,33,0.5)', label: '⛅ Tidak Hujan', labelColor: '#6b7280' }
+      };
+
+      if (stationFeatures.length === 0) {
+        container.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500 text-sm">Tidak ada data stasiun.</div>';
+        return;
+      }
+
+      const html = stationFeatures.map(f => {
+        const sid = f.properties.stationID;
+        const loc = f.properties.location || sid;
+        const d = stationData[sid] || { precipRate: 0, precipTotal: 0, datetime: '' };
+        const rate = (d.precipRate || 0).toFixed(1);
+        const total = (d.precipTotal || 0).toFixed(1);
+        const dt = d.datetime || '—';
+        const cls = classifyRain(d.precipRate || 0);
+        const st = CARD_STATUS[cls];
+        return `
+          <div class="rounded-xl border-l-4 p-3 flex flex-col justify-between transition-all"
+               style="background:${st.bg};border-left-color:${st.border};border:1px solid #2a2d35;border-left:3px solid ${st.border}">
+            <div>
+              <h3 class="font-semibold text-gray-200 text-sm leading-tight truncate" title="${loc}">${loc}</h3>
+              <p class="text-xs mt-0.5" style="color:#6b7280">${sid}</p>
+            </div>
+            <div class="mt-2">
+              <div class="flex items-end justify-between">
+                <div>
+                  <span class="text-2xl font-bold" style="color:#e5e7eb">${rate}</span>
+                  <span class="text-xs ml-0.5" style="color:#6b7280">mm/h</span>
+                </div>
+                <div class="text-right">
+                  <span class="text-xs uppercase tracking-wider" style="color:#6b7280">Daily</span><br>
+                  <span class="text-base font-bold" style="color:#9ca3af">${total} <span class="text-xs font-normal">mm</span></span>
+                </div>
+              </div>
+              <div class="mt-2 flex items-center justify-between">
+                <span class="text-xs font-semibold px-1.5 py-0.5 rounded" style="color:${st.labelColor};background:rgba(0,0,0,0.25)">${st.label}</span>
+                <span class="text-xs" style="color:#4b5563">${dt ? dt.split(' ')[1] || dt : '—'}</span>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+
+      container.innerHTML = html;
+    }
+
+    // ─── Focus Station on Map ─────────────────────────────────────────────────
+    function focusStation(sid) {
+      const dotM = dotMarkersMap[sid];
+      if (!dotM) return;
+      switchTab('map');
+      const lngLat = dotM.getLngLat();
+      map.flyTo({ center: [lngLat.lng, lngLat.lat], zoom: 13, duration: 800 });
+      setTimeout(() => dotM.togglePopup(), 900);
+    }
+
+    // ─── Build History Charts (from CSV) ─────────────────────────────────────
+    function buildCharts() {
+      const container = document.getElementById('hist-charts-container');
+      container.innerHTML = '';
+      // Clear old charts
+      Object.values(apexCharts).forEach(c => c.destroy());
+      apexCharts = {};
+
+      const chartStations = [
+        { id: 'ITABAL8', label: 'ROM-20' },
+        { id: 'ITABAL9', label: 'ROM-19' },
+        { id: 'IBALAN17', label: 'ROM-13' },
+        { id: 'ITABAL1', label: 'LW BUMA' },
+        { id: 'ITABAL11', label: 'ROM-09' },
+        { id: 'IBALAN16', label: 'ROM-06' },
+        { id: 'ITABAL5', label: 'ROM-03' },
+        { id: 'ITABAL12', label: 'SP3 WARA' },
+        { id: 'ITABAL10', label: 'KM 67' },
+        { id: 'ISOUTH1402', label: 'QC Kelanis' },
+        { id: 'ISOUTH1403', label: 'Port Kelanis' },
+      ];
+
+      chartStations.forEach(({ id, label }) => {
+        const d = stationData[id];
+        if (!d || !d.allRows || d.allRows.length === 0) return;
+
+        const rows = d.allRows;
+        const datetimes = rows.map(r => new Date(r.datetime).getTime());
+        const rates = rows.map(r => parseFloat(r.precipRate) || 0);
+        const totals = rows.map(r => parseFloat(r.precipTotal) || 0);
+
+        const rateColor = (r => {
+          const c = classifyRain(r);
+          return c === 'sangat' ? '#ed4343' : c === 'lebat' ? '#f97316' : c === 'sedang' ? '#e3930e' : c === 'ringan' ? '#0f9f73' : '#6b7280';
+        })(d.precipRate);
+
+        const card = document.createElement('div');
+        card.className = 'chart-card';
+        card.innerHTML = `
+        <div class="flex justify-between items-center mb-3">
+          <div>
+            <h3 class="font-semibold text-gray-200">${label}</h3>
+            <p class="text-xs text-gray-500">${id}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-xs text-gray-500">Current Rate</p>
+            <p class="text-lg font-bold" style="color:${rateColor}">${d.precipRate.toFixed(1)} mm/h</p>
+          </div>
+        </div>
+        <div id="chart-${id}"></div>`;
+        container.appendChild(card);
+
+        const options = {
+          chart: {
+            type: 'area',
+            height: 180,
+            background: 'transparent',
+            toolbar: { show: false },
+            animations: { enabled: true, easing: 'easeinout', speed: 600 },
+            sparkline: { enabled: false }
+          },
+          dataLabels: { enabled: false },
+          series: [
+            { name: 'Precip Rate (mm/h)', data: datetimes.map((t, i) => ({ x: t, y: rates[i] })) },
+            { name: 'Daily Total (mm)', data: datetimes.map((t, i) => ({ x: t, y: totals[i] })) }
+          ],
+          colors: ['#e3930e', '#0f9f73'],
+          fill: {
+            type: 'gradient',
+            gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 100] }
+          },
+          stroke: { curve: 'smooth', width: 2 },
+          xaxis: {
+            type: 'datetime',
+            labels: { style: { colors: '#6b7280', fontSize: '10px' }, format: 'dd MMM' },
+            axisBorder: { color: '#2a2d35' },
+            axisTicks: { color: '#2a2d35' }
+          },
+          yaxis: {
+            labels: { style: { colors: '#6b7280', fontSize: '10px' } },
+            min: 0
+          },
+          grid: { borderColor: '#2a2d35', strokeDashArray: 4 },
+          tooltip: {
+            theme: 'dark',
+            x: { format: 'dd MMM yy HH:mm' },
+            style: { background: '#1a1c21' }
+          },
+          legend: { labels: { colors: '#9ca3af' }, position: 'top', horizontalAlign: 'right', fontSize: '11px' },
+          annotations: {
+            yaxis: [
+              {
+                y: RAIN.ringan, borderColor: '#0f9f73', borderWidth: 1, strokeDashArray: 4,
+                label: {
+                  text: 'Ringan', position: 'left', offsetX: 10,
+                  style: { color: '#0f9f73', background: 'transparent', fontSize: '9px', padding: { left: 4, right: 4 } }
+                }
+              },
+              {
+                y: RAIN.sedang, borderColor: '#e3930e', borderWidth: 1, strokeDashArray: 4,
+                label: {
+                  text: 'Sedang', position: 'left', offsetX: 10,
+                  style: { color: '#e3930e', background: 'transparent', fontSize: '9px', padding: { left: 4, right: 4 } }
+                }
+              },
+              {
+                y: RAIN.lebat, borderColor: '#f97316', borderWidth: 1, strokeDashArray: 4,
+                label: {
+                  text: 'Lebat', position: 'left', offsetX: 10,
+                  style: { color: '#f97316', background: 'transparent', fontSize: '9px', padding: { left: 4, right: 4 } }
+                }
+              },
+              {
+                y: RAIN.sangat_lebat, borderColor: '#ed4343', borderWidth: 1.5, strokeDashArray: 4,
+                label: {
+                  text: 'Sgt Lebat', position: 'left', offsetX: 10,
+                  style: { color: '#ed4343', background: 'transparent', fontSize: '9px', padding: { left: 4, right: 4 } }
+                }
+              }
+            ]
+          },
+          theme: { mode: 'dark' }
+        };
+
+        const chart = new ApexCharts(document.getElementById(`chart-${id}`), options);
+        chart.render();
+        apexCharts[id] = chart;
+      });
+    }
+
+    // ─── Historical Charts via Weather.com API ─────────────────────────────────
+    const WX_API_KEY = 'e1f10a1e78da46f5b10a1e78da96f525';
+    let histChartsLoaded = false;
+    let histApexCharts = {};
+
+    async function loadAllHistoricalCharts() {
+      const container = document.getElementById('hist-charts-container');
+      const statusEl = document.getElementById('hist-status');
+      const progressEl = document.getElementById('hist-progress');
+      const refreshIcon = document.getElementById('hist-refresh-icon');
+
+      // Clear old
+      Object.values(histApexCharts).forEach(c => c.destroy());
+      histApexCharts = {};
+      container.innerHTML = '';
+      statusEl.classList.remove('hidden');
+      refreshIcon.classList.add('spinning');
+
+      const stationList = Object.entries(stationLabels); // [id, label]
+      let loaded = 0;
+      progressEl.textContent = `Memuat 0 / ${stationList.length} stasiun…`;
+
+      // Fetch all stations in parallel
+      const results = await Promise.allSettled(
+        stationList.map(async ([stationId, label]) => {
+          const url = `https://api.weather.com/v2/pws/dailysummary/7day?stationId=${stationId}&format=json&units=m&apiKey=${WX_API_KEY}`;
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const json = await res.json();
+          if (!json.summaries) throw new Error('No summaries');
+          loaded++;
+          progressEl.textContent = `Memuat ${loaded} / ${stationList.length} stasiun…`;
+          return { stationId, label, summaries: json.summaries };
+        })
+      );
+
+      refreshIcon.classList.remove('spinning');
+      statusEl.classList.add('hidden');
+
+      // Render a card+bar-chart for each result
+      results.forEach((result, idx) => {
+        const [stationId, label] = stationList[idx];
+        const card = document.createElement('div');
+        card.className = 'chart-card';
+
+        if (result.status === 'rejected') {
+          card.innerHTML = `
+            <div class="flex justify-between items-center mb-2">
+              <div>
+                <h3 class="font-semibold text-gray-200">${label}</h3>
+                <p class="text-xs text-gray-500">${stationId}</p>
+              </div>
+            </div>
+            <div class="text-center py-6 text-gray-500 text-xs">Gagal memuat data</div>`;
+          container.appendChild(card);
+          return;
         }
 
-        function panImage(e) {
-            if (!isPanning) return;
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
+        const { summaries } = result.value;
+        const xLabels = summaries.map(d => d.obsTimeLocal.split(' ')[0]);
+        const dataPoints = summaries.map(d => d.metric.precipTotal ?? 0);
 
-            currentX = initialX + dx;
-            currentY = initialY + dy;
-            
-            document.getElementById('modalImage').style.transform = `translate(${currentX}px, ${currentY}px) scale(${scale})`;
-        }
+        card.innerHTML = `
+          <div class="flex justify-between items-center mb-3">
+            <div>
+              <h3 class="font-semibold text-gray-200">${label}</h3>
+              <p class="text-xs text-gray-500">${stationId}</p>
+            </div>
+            <p class="text-xs text-gray-500">7-Day Total</p>
+          </div>
+          <div id="hist-chart-${stationId}"></div>`;
+        container.appendChild(card);
 
-        function stopPan() {
-            isPanning = false;
-            document.removeEventListener('mousemove', panImage);
-            document.removeEventListener('mouseup', stopPan);
-            document.getElementById('modalImage').style.cursor = 'grab';
-        }
+        const options = {
+          chart: {
+            type: 'bar',
+            height: 160,
+            background: 'transparent',
+            toolbar: { show: false },
+            animations: { enabled: true, speed: 400 }
+          },
+          dataLabels: { enabled: false },
+          series: [{ name: 'Curah Hujan (mm/hari)', data: dataPoints }],
+          xaxis: {
+            categories: xLabels,
+            labels: { style: { colors: '#6b7280', fontSize: '9px' }, rotate: -30 },
+            axisBorder: { color: '#2a2d35' },
+            axisTicks: { color: '#2a2d35' }
+          },
+          yaxis: {
+            labels: { style: { colors: '#6b7280', fontSize: '10px' } },
+            title: { text: 'mm', style: { color: '#6b7280', fontSize: '10px' } },
+            min: 0
+          },
+          colors: ['rgba(16,185,129,0.8)'],
+          plotOptions: { bar: { borderRadius: 3, columnWidth: '60%' } },
+          grid: { borderColor: '#2a2d35', strokeDashArray: 4 },
+          tooltip: { theme: 'dark', x: { format: 'dd MMM' } },
+          theme: { mode: 'dark' }
+        };
 
-        // Close modal saat klik di luar gambar
-        window.onclick = function(event) {
-            const modal = document.getElementById('imageModal');
-            if (event.target == modal) {
-                closeModal();
-            }
+        const chart = new ApexCharts(document.getElementById(`hist-chart-${stationId}`), options);
+        chart.render();
+        histApexCharts[stationId] = chart;
+      });
+
+      histChartsLoaded = true;
+    }
+
+    // ─── Tab Switching ────────────────────────────────────────────────────────
+    let chartsBuilt = false;
+    function switchTab(name) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('active');
+        b.style.color = '#9ca3af';
+        b.style.borderBottomColor = 'transparent';
+      });
+      document.getElementById(`panel-${name}`).classList.remove('hidden');
+      const btn = document.getElementById(`tab-${name}`);
+      btn.classList.add('active');
+      btn.style.color = '#e3930e';
+      btn.style.borderBottomColor = '#e3930e';
+
+      if (name === 'map') {
+        map.resize();
+      }
+      // History tab: load from API on first visit (CSV-based area charts still available via buildCharts)
+      if (name === 'history' && !histChartsLoaded) {
+        loadAllHistoricalCharts();
+      }
+    }
+
+    // ─── Auto Refresh ─────────────────────────────────────────────────────────
+    function doFullRefresh() {
+      // Animate refresh icon
+      const icon = document.getElementById('refresh-icon');
+      icon.classList.add('spinning');
+      setTimeout(() => icon.classList.remove('spinning'), 1200);
+
+      // Reset countdown
+      countdownSecs = REFRESH_INTERVAL_MS / 1000;
+
+      // Pause animation if playing
+      if (isRadarPlaying) toggleRadarAnimation();
+
+      // Refresh radar
+      addRadarLayer();
+
+      // Refresh station markers
+      loadStations().then(() => {
+        // Reset history flag so next visit reloads from API
+        histChartsLoaded = false;
+        const histPanel = document.getElementById('panel-history');
+        if (!histPanel.classList.contains('hidden')) {
+          loadAllHistoricalCharts();
         }
-    </script>
-    
-    <!-- Libraries -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="script.js"></script>
+      });
+
+      // Update timestamp
+      const now = new Date();
+      document.getElementById('last-update').innerHTML = `<span class="w-2 h-2 rounded-full bg-brand-teal inline-block" style="animation:pulse 2s infinite"></span><span>Updated ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}</span>`;
+    }
+
+    function startCountdown() {
+      countdownSecs = REFRESH_INTERVAL_MS / 1000;
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        countdownSecs--;
+        if (countdownSecs <= 0) {
+          countdownSecs = REFRESH_INTERVAL_MS / 1000;
+          doFullRefresh();
+        }
+        const m = Math.floor(countdownSecs / 60).toString().padStart(1, '0');
+        const s = (countdownSecs % 60).toString().padStart(2, '0');
+        document.getElementById('countdown-badge').textContent = `${m}:${s}`;
+      }, 1000);
+    }
+
+    // ─── Init ─────────────────────────────────────────────────────────────────
+    function buildLegend() {
+      // Legend entries: use exact same rainPillHTML() as the map markers
+      const LEGEND = [
+        { cls: null, label: 'Stasiun Cuaca', range: '' },
+        { cls: 'ringan', label: null, range: '1 – 5 mm/h' },
+        { cls: 'sedang', label: null, range: '5 – 10 mm/h' },
+        { cls: 'lebat', label: null, range: '10 – 20 mm/h' },
+        { cls: 'sangat', label: null, range: '> 20 mm/h' },
+      ];
+      const container = document.getElementById('legend-rain');
+      container.innerHTML = '';
+      LEGEND.forEach(({ cls, label, range }) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:6px;';
+        if (cls === null) {
+          // Station dot preview
+          row.innerHTML = `
+            <div style="position:relative;width:12px;height:12px;flex-shrink:0">
+              <div style="width:12px;height:12px;border-radius:50%;background:#cd3f40;border:2px solid rgba(255,255,255,0.5);box-shadow:0 0 0 3px rgba(205,63,64,0.2)"></div>
+            </div>
+            <span style="font-size:10px;color:#9ca3af">${label}</span>`;
+        } else {
+          // Pill icon: identical to rainPillHTML() output
+          const pillDiv = document.createElement('div');
+          pillDiv.innerHTML = rainPillHTML(cls);
+          // Remove pulse ring in legend (static display)
+          const pulse = pillDiv.querySelector('.rain-pulse');
+          if (pulse) pulse.remove();
+          // Disable pointer-events (it's just a legend) and remove hover transition
+          const pill = pillDiv.querySelector('.rain-pill');
+          if (pill) { pill.style.transition = 'none'; pill.style.pointerEvents = 'none'; }
+          row.appendChild(pillDiv);
+          if (range) {
+            const span = document.createElement('span');
+            span.style.cssText = 'font-size:10px;color:#6b7280;';
+            span.textContent = range;
+            row.appendChild(span);
+          }
+        }
+        container.appendChild(row);
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initMap();
+      startCountdown();
+      buildLegend();
+      // default tab active style
+      document.getElementById('tab-map').style.color = '#e3930e';
+      document.getElementById('tab-map').style.borderBottomColor = '#e3930e';
+    });
+
+    // ─── Lightbox ─────────────────────────────────────────────────────────────
+    function openLightbox(src, alt) {
+      const lb = document.getElementById('lightbox');
+      document.getElementById('lightbox-img').src = src;
+      document.getElementById('lightbox-img').alt = alt || '';
+      lb.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+  </script>
 </body>
+
 </html>
