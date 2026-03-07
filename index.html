@@ -4,9 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SiCaDA - Prediksi Cuaca Adaro</title>
+  <title>SiCaDa - Prediksi Cuaca Adaro</title>
   <meta name="description"
-    content="SICADA - Dashboard cuaca real-time Adaro. Monitor intensitas hujan, radar BMKG, dan data stasiun cuaca." />
+    content="SiCaDa - Dashboard cuaca real-time Adaro. Monitor intensitas hujan, radar BMKG, dan data stasiun cuaca." />
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -524,7 +524,7 @@
   <!-- ===== HEADER ===== -->
   <header class="sticky top-0 z-50 border-b border-brand-border"
     style="background:rgba(15,16,19,0.95);backdrop-filter:blur(12px)">
-    <div class="max-w-screen-xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="max-w-full mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <!-- Logo / Icon -->
         <div class="w-9 h-9 rounded-lg flex items-center justify-center"
@@ -565,7 +565,7 @@
   <!-- ===== NAV TABS ===== -->
   <nav class="border-b border-brand-border sticky top-14 z-40"
     style="background:rgba(15,16,19,0.95);backdrop-filter:blur(12px)">
-    <div class="max-w-screen-xl mx-auto px-4 flex gap-1">
+    <div class="max-w-full mx-auto px-4 flex gap-1">
       <button
         class="tab-btn active py-3 px-4 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5"
         onclick="switchTab('map')" id="tab-map">
@@ -605,7 +605,7 @@
   </nav>
 
   <!-- ===== MAIN CONTENT ===== -->
-  <main class="max-w-screen-xl mx-auto px-4 py-4">
+  <main class="max-w-full mx-auto px-4 py-4">
 
     <!-- ===== TAB: MAP ===== -->
     <div id="panel-map" class="tab-panel">
